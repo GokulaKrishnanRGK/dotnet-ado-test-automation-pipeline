@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="OpsLedger.App.Pages.DashboardPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Dashboard"
+    BackgroundColor="{StaticResource PageBackground}">
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16">
+            <Label
+                Style="{StaticResource PageTitleLabel}"
+                Text="Operational dashboard"
+                TextColor="{StaticResource TextPrimary}" />
+            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
+                <Border Style="{StaticResource MetricCard}">
+                    <VerticalStackLayout>
+                        <Label Style="{StaticResource SecondaryLabel}" Text="New" />
+                        <Label FontAttributes="Bold" FontSize="24" Text="0" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource MetricCard}">
+                    <VerticalStackLayout>
+                        <Label Style="{StaticResource SecondaryLabel}" Text="In Progress" />
+                        <Label FontAttributes="Bold" FontSize="24" Text="0" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Column="2" Style="{StaticResource MetricCard}">
+                    <VerticalStackLayout>
+                        <Label Style="{StaticResource SecondaryLabel}" Text="Blocked" />
+                        <Label FontAttributes="Bold" FontSize="24" Text="0" />
+                    </VerticalStackLayout>
+                </Border>
+                <Border Grid.Column="3" Style="{StaticResource MetricCard}">
+                    <VerticalStackLayout>
+                        <Label Style="{StaticResource SecondaryLabel}" Text="Resolved" />
+                        <Label FontAttributes="Bold" FontSize="24" Text="0" />
+                    </VerticalStackLayout>
+                </Border>
+            </Grid>
+            <Label Style="{StaticResource SecondaryLabel}" Text="Recent and high-priority requests will appear here after the request workflow is implemented." />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

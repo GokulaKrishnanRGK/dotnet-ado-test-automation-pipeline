@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="OpsLedger.App.Pages.RequestDetailsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Request Details"
+    BackgroundColor="{StaticResource PageBackground}">
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16">
+            <Label
+                Style="{StaticResource PageTitleLabel}"
+                Text="Request details"
+                TextColor="{StaticResource TextPrimary}" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                <VerticalStackLayout Spacing="10">
+                    <Label FontAttributes="Bold" Text="Status" />
+                    <Picker AutomationId="RequestStatusPicker" Title="Status">
+                        <Picker.Items>
+                            <x:String>New</x:String>
+                            <x:String>In Progress</x:String>
+                            <x:String>Blocked</x:String>
+                            <x:String>Resolved</x:String>
+                        </Picker.Items>
+                    </Picker>
+                    <Entry AutomationId="AssignedOperatorEntry" Placeholder="Assigned operator" />
+                    <Editor AutomationId="ResolutionNotesEditor" AutoSize="TextChanges" Placeholder="Resolution notes" />
+                    <Button AutomationId="SaveRequestChangesButton" Text="Save changes" />
+                </VerticalStackLayout>
+                <VerticalStackLayout Grid.Column="1" Spacing="10">
+                    <Label FontAttributes="Bold" Text="Activity" />
+                    <CollectionView AutomationId="RequestActivityList">
+                        <CollectionView.EmptyView>
+                            <Label Style="{StaticResource SecondaryLabel}" Text="Activity history will appear here." />
+                        </CollectionView.EmptyView>
+                    </CollectionView>
+                    <Editor AutomationId="NewCommentEditor" AutoSize="TextChanges" Placeholder="Add a comment" />
+                    <Button AutomationId="AddCommentButton" Text="Add comment" />
+                </VerticalStackLayout>
+            </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

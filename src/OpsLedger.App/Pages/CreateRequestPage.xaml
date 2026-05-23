@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="OpsLedger.App.Pages.CreateRequestPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Create Request"
+    BackgroundColor="{StaticResource PageBackground}">
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="12">
+            <Label
+                Style="{StaticResource PageTitleLabel}"
+                Text="Create service request"
+                TextColor="{StaticResource TextPrimary}" />
+            <Entry AutomationId="RequestTitleEntry" Placeholder="Title" />
+            <Picker AutomationId="RequestCategoryPicker" Title="Category">
+                <Picker.Items>
+                    <x:String>IT</x:String>
+                    <x:String>Facilities</x:String>
+                    <x:String>HR</x:String>
+                    <x:String>Security</x:String>
+                    <x:String>Finance</x:String>
+                </Picker.Items>
+            </Picker>
+            <Picker AutomationId="RequestPriorityPicker" Title="Priority">
+                <Picker.Items>
+                    <x:String>Low</x:String>
+                    <x:String>Normal</x:String>
+                    <x:String>High</x:String>
+                    <x:String>Critical</x:String>
+                </Picker.Items>
+            </Picker>
+            <Editor AutomationId="RequestDescriptionEditor" AutoSize="TextChanges" Placeholder="Description" />
+            <Editor AutomationId="RequestImpactEditor" AutoSize="TextChanges" Placeholder="Impact details for critical requests" />
+            <Entry AutomationId="RequesterNameEntry" Placeholder="Requester name" />
+            <Entry AutomationId="RequesterEmailEntry" Keyboard="Email" Placeholder="Requester email" />
+            <Button AutomationId="SubmitRequestButton" Text="Submit request" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
