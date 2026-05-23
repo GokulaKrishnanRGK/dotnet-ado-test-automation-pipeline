@@ -45,12 +45,80 @@ public sealed class OpsLedgerServiceRequestClient(HttpClient httpClient) : IServ
         return requests ?? [];
     }
 
+    public async Task<ServiceRequestSummary?> GetAsync(
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        using HttpResponseMessage response = await httpClient.GetAsync($"service-requests/{Uri.EscapeDataString(id)}", cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ServiceRequestSummary>(cancellationToken);
+    }
+
+    public Task<ServiceRequestClientResult> AssignAsync(
+        string id,
+        AssignServiceRequestInput request,
+        CancellationToken cancellationToken = default)
+    {
+        return SendForRequestResultAsync(
+            () => httpClient.PatchAsJsonAsync($"service-requests/{Uri.EscapeDataString(id)}/assignment", request, cancellationToken),
+            cancellationToken);
+    }
+
+    public Task<ServiceRequestClientResult> ResolveAsync(
+        string id,
+        ResolveServiceRequestInput request,
+        CancellationToken cancellationToken = default)
+    {
+        return SendForRequestResultAsync(
+            () => httpClient.PatchAsJsonAsync($"service-requests/{Uri.EscapeDataString(id)}/resolution", request, cancellationToken),
+            cancellationToken);
+    }
+
+    public Task<ServiceRequestClientResult> AddCommentAsync(
+        string id,
+        AddServiceRequestCommentInput request,
+        CancellationToken cancellationToken = default)
+    {
+        return SendForRequestResultAsync(
+            () => httpClient.PostAsJsonAsync($"service-requests/{Uri.EscapeDataString(id)}/comments", request, cancellationToken),
+            cancellationToken);
+    }
+
     private static void AddQueryValue(ICollection<string> query, string key, string? value)
     {
         if (!string.IsNullOrWhiteSpace(value) && value != "All")
         {
             query.Add($"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(value)}");
         }
+    }
+
+    private static async Task<ServiceRequestClientResult> SendForRequestResultAsync(
+        Func<Task<HttpResponseMessage>> send,
+        CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await send();
+
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            ValidationErrorResponse? validation = await response.Content.ReadFromJsonAsync<ValidationErrorResponse>(cancellationToken);
+            return ServiceRequestClientResult.Invalid(validation?.Errors ?? ["The request was invalid."]);
+        }
+
+        response.EnsureSuccessStatusCode();
+
+        ServiceRequestSummary? updated = await response.Content.ReadFromJsonAsync<ServiceRequestSummary>(cancellationToken);
+        if (updated is null)
+        {
+            return ServiceRequestClientResult.Invalid(["The service request response was empty."]);
+        }
+
+        return ServiceRequestClientResult.Created(updated);
     }
 
     private sealed record ValidationErrorResponse(IReadOnlyList<string> Errors);
