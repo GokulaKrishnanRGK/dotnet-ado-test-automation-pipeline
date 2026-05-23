@@ -4,6 +4,7 @@
     <Project Path="src/OpsLedger.App/OpsLedger.App.csproj" />
     <Project Path="src/OpsLedger.Core/OpsLedger.Core.csproj" />
     <Project Path="src/OpsLedger.Infrastructure/OpsLedger.Infrastructure.csproj" />
+    <Project Path="src/OpsLedger.Presentation/OpsLedger.Presentation.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/OpsLedger.BddTests/OpsLedger.BddTests.csproj" />

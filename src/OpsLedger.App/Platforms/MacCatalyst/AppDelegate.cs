@@ -20,16 +20,16 @@ public class AppDelegate : MauiUIApplicationDelegate
 
     private static void ConfigureTabBarAppearance()
     {
-        var dockBackground = UIColor.FromRGB(32, 42, 50);
-        var selectedText = UIColor.FromRGB(58, 175, 169);
-        var unselectedText = UIColor.FromRGB(244, 247, 249);
-        var titleOffset = new UIOffset(0, -9);
-        var selectedAttributes = new UIStringAttributes
+        UIColor dockBackground = UIColor.FromRGB(32, 42, 50);
+        UIColor selectedText = UIColor.FromRGB(58, 175, 169);
+        UIColor unselectedText = UIColor.FromRGB(244, 247, 249);
+        UIOffset titleOffset = new(0, -9);
+        UIStringAttributes selectedAttributes = new()
         {
             Font = UIFont.SystemFontOfSize(13, UIFontWeight.Semibold),
             ForegroundColor = selectedText
         };
-        var normalAttributes = new UIStringAttributes
+        UIStringAttributes normalAttributes = new()
         {
             Font = UIFont.SystemFontOfSize(13, UIFontWeight.Medium),
             ForegroundColor = unselectedText
@@ -46,7 +46,7 @@ public class AppDelegate : MauiUIApplicationDelegate
 
         if (OperatingSystem.IsIOSVersionAtLeast(15) || OperatingSystem.IsMacCatalystVersionAtLeast(15))
         {
-            var appearance = new UITabBarAppearance();
+            UITabBarAppearance appearance = new();
             appearance.ConfigureWithOpaqueBackground();
             appearance.BackgroundColor = dockBackground;
             appearance.StackedLayoutAppearance.Normal.TitlePositionAdjustment = titleOffset;

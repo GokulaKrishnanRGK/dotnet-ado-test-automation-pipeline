@@ -24,5 +24,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OpsLedger.Core\OpsLedger.Core.csproj" />
+    <ProjectReference Include="..\OpsLedger.Presentation\OpsLedger.Presentation.csproj" />
   </ItemGroup>
 </Project>

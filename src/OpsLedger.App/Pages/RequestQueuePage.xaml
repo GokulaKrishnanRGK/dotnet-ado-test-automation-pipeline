@@ -11,14 +11,62 @@
             Text="Request queue"
             TextColor="{StaticResource TextPrimary}" />
         <HorizontalStackLayout Spacing="12">
-            <Picker AutomationId="StatusFilterPicker" Title="Status" WidthRequest="180" />
-            <Picker AutomationId="PriorityFilterPicker" Title="Priority" WidthRequest="180" />
-            <Picker AutomationId="CategoryFilterPicker" Title="Category" WidthRequest="180" />
+            <Picker
+                AutomationId="StatusFilterPicker"
+                ItemsSource="{Binding Statuses}"
+                SelectedItem="{Binding SelectedStatus}"
+                Title="Status"
+                WidthRequest="180" />
+            <Picker
+                AutomationId="PriorityFilterPicker"
+                ItemsSource="{Binding Priorities}"
+                SelectedItem="{Binding SelectedPriority}"
+                Title="Priority"
+                WidthRequest="180" />
+            <Button
+                AutomationId="RefreshQueueButton"
+                Command="{Binding LoadCommand}"
+                Text="Refresh" />
         </HorizontalStackLayout>
-        <CollectionView AutomationId="RequestQueueList">
+        <Label
+            AutomationId="QueueErrorLabel"
+            Style="{StaticResource SecondaryLabel}"
+            Text="{Binding ErrorMessage}"
+            TextColor="#EF767A" />
+        <CollectionView
+            AutomationId="RequestQueueList"
+            ItemsSource="{Binding Requests}">
             <CollectionView.EmptyView>
                 <Label Style="{StaticResource SecondaryLabel}" Text="No service requests match the current filters." />
             </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Border
+                        Margin="0,0,0,10"
+                        Padding="14"
+                        Style="{StaticResource MetricCard}">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6">
+                            <Label
+                                FontAttributes="Bold"
+                                Text="{Binding Title}"
+                                TextColor="{StaticResource TextPrimary}" />
+                            <Label
+                                Grid.Column="1"
+                                Text="{Binding Priority}"
+                                TextColor="{StaticResource Accent}" />
+                            <Label
+                                Grid.Row="1"
+                                Style="{StaticResource SecondaryLabel}"
+                                Text="{Binding Status}" />
+                            <Label
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                Style="{StaticResource SecondaryLabel}"
+                                Text="{Binding Category}" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
         </CollectionView>
     </VerticalStackLayout>
 </ContentPage>
