@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OpsLedger.Api/OpsLedger.Api.csproj" />
+    <Project Path="src/OpsLedger.App/OpsLedger.App.csproj" />
+    <Project Path="src/OpsLedger.Core/OpsLedger.Core.csproj" />
+    <Project Path="src/OpsLedger.Infrastructure/OpsLedger.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpsLedger.BddTests/OpsLedger.BddTests.csproj" />
+    <Project Path="tests/OpsLedger.IntegrationTests/OpsLedger.IntegrationTests.csproj" />
+    <Project Path="tests/OpsLedger.UnitTests/OpsLedger.UnitTests.csproj" />
+  </Folder>
+</Solution>
