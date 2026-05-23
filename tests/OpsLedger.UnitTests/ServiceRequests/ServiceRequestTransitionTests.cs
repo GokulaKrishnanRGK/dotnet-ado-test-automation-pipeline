@@ -78,6 +78,45 @@ public sealed class ServiceRequestTransitionTests
             activity.Description == "Request resolved.");
     }
 
+    [Fact]
+    public void AddComment_rejects_missing_author_and_body()
+    {
+        ServiceRequest request = NewRequest();
+
+        OperationResult<ServiceRequest> result = ServiceRequestWorkflow.AddComment(
+            request,
+            new AddServiceRequestCommentCommand(" ", ""),
+            ChangedAt);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Errors.Should().Contain(new[]
+        {
+            "Comment author is required.",
+            "Comment body is required."
+        });
+    }
+
+    [Fact]
+    public void AddComment_records_comment_and_activity()
+    {
+        ServiceRequest request = NewRequest();
+
+        OperationResult<ServiceRequest> result = ServiceRequestWorkflow.AddComment(
+            request,
+            new AddServiceRequestCommentCommand("  Morgan Lee  ", "  Waiting on replacement display.  "),
+            ChangedAt);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Comments.Should().ContainSingle(comment =>
+            comment.AuthorName == "Morgan Lee" &&
+            comment.Body == "Waiting on replacement display." &&
+            comment.CreatedAt == ChangedAt);
+        result.Value.Activity.Should().Contain(activity =>
+            activity.Type == RequestActivityType.CommentAdded &&
+            activity.OccurredAt == ChangedAt &&
+            activity.Description == "Comment added by Morgan Lee.");
+    }
+
     private static ServiceRequest NewRequest()
     {
         OperationResult<ServiceRequest> result = ServiceRequestFactory.Create(
