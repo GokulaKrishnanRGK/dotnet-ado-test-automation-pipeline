@@ -1,6 +1,6 @@
 # .NET Quality Feedback Pipeline
 
-A compact C#/.NET project that demonstrates a production-style testing and delivery feedback loop around a deliberately small console application.
+A compact C#/.NET MAUI project that demonstrates a production-style testing and delivery feedback loop around a deliberately small desktop application.
 
 The application itself is intentionally simple. The main focus is the engineering system around it: unit tests, integration tests, Gherkin-based BDD validation, GitHub Actions CI, Azure DevOps orchestration, notifications, and automated defect ticket creation.
 
@@ -11,10 +11,10 @@ flowchart TD
     A["Developer merges to main"] --> B["GitHub Actions"]
     B --> C["Restore, build, unit tests"]
     C --> D["Integration tests"]
-    D --> E["Publish executable artifact"]
+    D --> E["Publish win-x64 MAUI executable artifact"]
     E --> F["Trigger Azure DevOps pipeline"]
     F --> G["Prepare BDD test environment"]
-    G --> H["Run Reqnroll BDD tests against artifact"]
+    G --> H["Run Reqnroll BDD tests against Windows .exe"]
     H --> I["Publish test results"]
     I --> J{"BDD tests passed?"}
     J -- "Yes" --> K["Send success notification"]
@@ -26,6 +26,7 @@ flowchart TD
 
 - .NET 8 or later
 - C#
+- .NET MAUI
 - xUnit or NUnit
 - FluentAssertions
 - Reqnroll for Gherkin/BDD tests
@@ -37,10 +38,10 @@ flowchart TD
 
 ## Project Flow
 
-1. Build a small C# console app using TDD.
+1. Build a small C#/.NET MAUI desktop app using TDD for the UI-independent business logic.
 2. Add unit tests for fast business-rule validation.
 3. Add integration tests for realistic boundaries.
-4. Publish the app as an executable artifact.
+4. Publish the app locally for Apple Silicon through the MAUI Mac Catalyst arm64 target and in CI as a `win-x64` executable artifact.
 5. Add Reqnroll BDD scenarios that run against the built artifact.
 6. Use GitHub Actions for restore, build, test, and artifact publishing.
 7. Trigger Azure DevOps from `main` builds.
@@ -49,7 +50,7 @@ flowchart TD
 
 ## Current Status
 
-This repository is in the planning and scaffolding phase. The project documentation and agent workflow files have been created; the .NET solution and CI/CD implementation are next.
+This repository is in the planning and scaffolding phase. The project documentation now targets a .NET MAUI desktop app; the MAUI solution and CI/CD implementation are next.
 
 ## Documentation
 
@@ -60,4 +61,3 @@ Detailed planning and workflow docs live in `docs/`, including:
 - `PROJECT_STATE.md`
 - `ARCHITECTURE_OVERVIEW.md`
 - `AGENT_WORKFLOW.md`
-
