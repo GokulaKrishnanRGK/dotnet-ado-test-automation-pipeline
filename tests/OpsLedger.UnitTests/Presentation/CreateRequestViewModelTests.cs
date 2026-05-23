@@ -69,5 +69,34 @@ public sealed class CreateRequestViewModelTests
         {
             return Task.FromResult<IReadOnlyList<ServiceRequestSummary>>([]);
         }
+
+        public Task<ServiceRequestSummary?> GetAsync(string id, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<ServiceRequestSummary?>(null);
+        }
+
+        public Task<ServiceRequestClientResult> AssignAsync(
+            string id,
+            AssignServiceRequestInput request,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(ServiceRequestClientResult.Invalid(["Not used."]));
+        }
+
+        public Task<ServiceRequestClientResult> ResolveAsync(
+            string id,
+            ResolveServiceRequestInput request,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(ServiceRequestClientResult.Invalid(["Not used."]));
+        }
+
+        public Task<ServiceRequestClientResult> AddCommentAsync(
+            string id,
+            AddServiceRequestCommentInput request,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(ServiceRequestClientResult.Invalid(["Not used."]));
+        }
     }
 }

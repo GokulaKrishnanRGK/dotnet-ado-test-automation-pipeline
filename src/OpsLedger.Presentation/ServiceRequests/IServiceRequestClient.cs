@@ -11,4 +11,23 @@ public interface IServiceRequestClient
     Task<IReadOnlyList<ServiceRequestSummary>> ListAsync(
         ServiceRequestFilter filter,
         CancellationToken cancellationToken = default);
+
+    Task<ServiceRequestSummary?> GetAsync(
+        string id,
+        CancellationToken cancellationToken = default);
+
+    Task<ServiceRequestClientResult> AssignAsync(
+        string id,
+        AssignServiceRequestInput request,
+        CancellationToken cancellationToken = default);
+
+    Task<ServiceRequestClientResult> ResolveAsync(
+        string id,
+        ResolveServiceRequestInput request,
+        CancellationToken cancellationToken = default);
+
+    Task<ServiceRequestClientResult> AddCommentAsync(
+        string id,
+        AddServiceRequestCommentInput request,
+        CancellationToken cancellationToken = default);
 }

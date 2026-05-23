@@ -11,30 +11,97 @@
                 Style="{StaticResource PageTitleLabel}"
                 Text="Request details"
                 TextColor="{StaticResource TextPrimary}" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <Entry
+                    AutomationId="RequestIdEntry"
+                    Placeholder="Request ID"
+                    Text="{Binding RequestId}" />
+                <Button
+                    Grid.Column="1"
+                    AutomationId="LoadRequestDetailsButton"
+                    Command="{Binding LoadCommand}"
+                    Text="Load" />
+            </Grid>
+            <Label
+                AutomationId="RequestDetailsSuccessLabel"
+                Style="{StaticResource SecondaryLabel}"
+                Text="{Binding SuccessMessage}"
+                TextColor="{StaticResource Primary}" />
+            <Label
+                AutomationId="RequestDetailsErrorLabel"
+                Style="{StaticResource SecondaryLabel}"
+                Text="{Binding ErrorMessage}"
+                TextColor="#EF767A" />
             <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
                 <VerticalStackLayout Spacing="10">
-                    <Label FontAttributes="Bold" Text="Status" />
-                    <Picker AutomationId="RequestStatusPicker" Title="Status">
-                        <Picker.Items>
-                            <x:String>New</x:String>
-                            <x:String>In Progress</x:String>
-                            <x:String>Blocked</x:String>
-                            <x:String>Resolved</x:String>
-                        </Picker.Items>
-                    </Picker>
-                    <Entry AutomationId="AssignedOperatorEntry" Placeholder="Assigned operator" />
-                    <Editor AutomationId="ResolutionNotesEditor" AutoSize="TextChanges" Placeholder="Resolution notes" />
-                    <Button AutomationId="SaveRequestChangesButton" Text="Save changes" />
+                    <Label FontAttributes="Bold" Text="{Binding Title}" />
+                    <Label Style="{StaticResource SecondaryLabel}" Text="{Binding Category}" />
+                    <Label Style="{StaticResource SecondaryLabel}" Text="{Binding Priority}" />
+                    <Label AutomationId="RequestStatusLabel" Text="{Binding Status}" />
+                    <Entry
+                        AutomationId="AssignedOperatorEntry"
+                        Placeholder="Assigned operator"
+                        Text="{Binding AssigneeName}" />
+                    <Button
+                        AutomationId="AssignRequestButton"
+                        Command="{Binding AssignCommand}"
+                        Text="Assign" />
+                    <Editor
+                        AutomationId="ResolutionNotesEditor"
+                        AutoSize="TextChanges"
+                        Placeholder="Resolution notes"
+                        Text="{Binding ResolutionNotes}" />
+                    <Button
+                        AutomationId="ResolveRequestButton"
+                        Command="{Binding ResolveCommand}"
+                        Text="Resolve" />
                 </VerticalStackLayout>
                 <VerticalStackLayout Grid.Column="1" Spacing="10">
                     <Label FontAttributes="Bold" Text="Activity" />
-                    <CollectionView AutomationId="RequestActivityList">
+                    <CollectionView
+                        AutomationId="RequestActivityList"
+                        ItemsSource="{Binding Activity}">
                         <CollectionView.EmptyView>
                             <Label Style="{StaticResource SecondaryLabel}" Text="Activity history will appear here." />
                         </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <Label
+                                    Margin="0,0,0,6"
+                                    Style="{StaticResource SecondaryLabel}"
+                                    Text="{Binding .}" />
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
                     </CollectionView>
-                    <Editor AutomationId="NewCommentEditor" AutoSize="TextChanges" Placeholder="Add a comment" />
-                    <Button AutomationId="AddCommentButton" Text="Add comment" />
+                    <Label FontAttributes="Bold" Text="Comments" />
+                    <CollectionView
+                        AutomationId="RequestCommentsList"
+                        ItemsSource="{Binding Comments}">
+                        <CollectionView.EmptyView>
+                            <Label Style="{StaticResource SecondaryLabel}" Text="No comments yet." />
+                        </CollectionView.EmptyView>
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate>
+                                <VerticalStackLayout Margin="0,0,0,10" Spacing="4">
+                                    <Label FontAttributes="Bold" Text="{Binding AuthorName}" />
+                                    <Label Style="{StaticResource SecondaryLabel}" Text="{Binding Body}" />
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                    <Entry
+                        AutomationId="CommentAuthorEntry"
+                        Placeholder="Comment author"
+                        Text="{Binding CommentAuthorName}" />
+                    <Editor
+                        AutomationId="NewCommentEditor"
+                        AutoSize="TextChanges"
+                        Placeholder="Add a comment"
+                        Text="{Binding NewCommentBody}" />
+                    <Button
+                        AutomationId="AddCommentButton"
+                        Command="{Binding AddCommentCommand}"
+                        Text="Add comment" />
                 </VerticalStackLayout>
             </Grid>
         </VerticalStackLayout>

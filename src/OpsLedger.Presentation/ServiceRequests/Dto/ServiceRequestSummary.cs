@@ -7,4 +7,8 @@ public sealed record ServiceRequestSummary(
     string Priority,
     string Status,
     DateTimeOffset CreatedAt,
-    DateTimeOffset SlaDueAt);
+    DateTimeOffset SlaDueAt,
+    string? AssigneeName = null,
+    string? ResolutionNotes = null,
+    IReadOnlyList<ServiceRequestComment>? Comments = null,
+    IReadOnlyList<string>? Activity = null);
