@@ -16,6 +16,9 @@ public static class ServiceRequestEndpoints
         endpoints.MapGet("/service-requests", ListServiceRequests)
             .WithName("ListServiceRequests");
 
+        endpoints.MapGet("/service-requests/{id}", GetServiceRequest)
+            .WithName("GetServiceRequest");
+
         endpoints.MapPost("/service-requests", CreateServiceRequest)
             .WithName("CreateServiceRequest");
 
@@ -24,6 +27,9 @@ public static class ServiceRequestEndpoints
 
         endpoints.MapPatch("/service-requests/{id}/resolution", ResolveServiceRequest)
             .WithName("ResolveServiceRequest");
+
+        endpoints.MapPost("/service-requests/{id}/comments", AddServiceRequestComment)
+            .WithName("AddServiceRequestComment");
 
         return endpoints;
     }
@@ -35,6 +41,20 @@ public static class ServiceRequestEndpoints
     {
         IReadOnlyList<ServiceRequestApiResponse> requests = store.List(status, priority);
         return Results.Ok(requests);
+    }
+
+    private static IResult GetServiceRequest(
+        string id,
+        IServiceRequestStore store)
+    {
+        StoredServiceRequest? storedRequest = store.Get(id);
+
+        if (storedRequest is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(ServiceRequestApiResponse.From(storedRequest.Id, storedRequest.Request));
     }
 
     private static IResult CreateServiceRequest(
@@ -121,6 +141,32 @@ public static class ServiceRequestEndpoints
         OperationResult<ServiceRequest> result = ServiceRequestWorkflow.Resolve(
             storedRequest.Request,
             new ResolveServiceRequestCommand(request.ResolutionNotes),
+            DateTimeOffset.UtcNow);
+
+        if (!result.IsSuccess)
+        {
+            return Results.BadRequest(new ValidationErrorResponse(result.Errors));
+        }
+
+        StoredServiceRequest updated = store.Update(storedRequest.Id, result.Value);
+        return Results.Ok(ServiceRequestApiResponse.From(updated.Id, updated.Request));
+    }
+
+    private static IResult AddServiceRequestComment(
+        string id,
+        AddServiceRequestCommentApiRequest request,
+        IServiceRequestStore store)
+    {
+        StoredServiceRequest? storedRequest = store.Get(id);
+
+        if (storedRequest is null)
+        {
+            return Results.NotFound();
+        }
+
+        OperationResult<ServiceRequest> result = ServiceRequestWorkflow.AddComment(
+            storedRequest.Request,
+            new AddServiceRequestCommentCommand(request.AuthorName, request.Body),
             DateTimeOffset.UtcNow);
 
         if (!result.IsSuccess)

@@ -163,6 +163,66 @@ public sealed class ServiceRequestApiTests : IClassFixture<WebApplicationFactory
         body.Activity.Should().Contain("Resolved");
     }
 
+    [Fact]
+    public async Task Get_service_request_by_id_returns_request_details()
+    {
+        ServiceRequestApiResponse created = await CreateRequestAsync(NewRequest("Inspect this request", "Security", "High"));
+
+        using HttpResponseMessage response = await _client.GetAsync($"/service-requests/{created.Id}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        ServiceRequestApiResponse? body = await response.Content.ReadFromJsonAsync<ServiceRequestApiResponse>();
+        body.Should().NotBeNull();
+        body!.Id.Should().Be(created.Id);
+        body.Title.Should().Be("Inspect this request");
+        body.Category.Should().Be("Security");
+    }
+
+    [Fact]
+    public async Task Get_service_request_by_id_returns_not_found_for_unknown_request()
+    {
+        using HttpResponseMessage response = await _client.GetAsync("/service-requests/not-found");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Post_comment_rejects_missing_comment_body()
+    {
+        ServiceRequestApiResponse created = await CreateRequestAsync(NewRequest("Reject empty comment", "IT", "Normal"));
+
+        using HttpResponseMessage response = await _client.PostAsJsonAsync(
+            $"/service-requests/{created.Id}/comments",
+            new AddServiceRequestCommentApiRequest("Morgan Lee", ""));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        ValidationErrorResponse? body = await response.Content.ReadFromJsonAsync<ValidationErrorResponse>();
+        body.Should().NotBeNull();
+        body!.Errors.Should().Contain("Comment body is required.");
+    }
+
+    [Fact]
+    public async Task Post_comment_adds_comment_to_request_details()
+    {
+        ServiceRequestApiResponse created = await CreateRequestAsync(NewRequest("Comment on this request", "IT", "Normal"));
+
+        using HttpResponseMessage response = await _client.PostAsJsonAsync(
+            $"/service-requests/{created.Id}/comments",
+            new AddServiceRequestCommentApiRequest("Morgan Lee", "Waiting on replacement hardware."));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        ServiceRequestApiResponse? body = await response.Content.ReadFromJsonAsync<ServiceRequestApiResponse>();
+        body.Should().NotBeNull();
+        body!.Id.Should().Be(created.Id);
+        body.Comments.Should().ContainSingle(comment =>
+            comment.AuthorName == "Morgan Lee" &&
+            comment.Body == "Waiting on replacement hardware.");
+        body.Activity.Should().Contain("CommentAdded");
+    }
+
     private static CreateServiceRequestApiRequest NewRequest(
         string title,
         string category,
@@ -193,6 +253,8 @@ public sealed class ServiceRequestApiTests : IClassFixture<WebApplicationFactory
 
     private sealed record ResolveServiceRequestApiRequest(string ResolutionNotes);
 
+    private sealed record AddServiceRequestCommentApiRequest(string AuthorName, string Body);
+
     private sealed record CreateServiceRequestApiRequest(
         string Title,
         string Category,
@@ -212,7 +274,13 @@ public sealed class ServiceRequestApiTests : IClassFixture<WebApplicationFactory
         DateTimeOffset SlaDueAt,
         string? AssigneeName,
         string? ResolutionNotes,
+        IReadOnlyList<ServiceRequestCommentApiResponse> Comments,
         IReadOnlyList<string> Activity);
+
+    private sealed record ServiceRequestCommentApiResponse(
+        string AuthorName,
+        string Body,
+        DateTimeOffset CreatedAt);
 
     private sealed record ValidationErrorResponse(IReadOnlyList<string> Errors);
 }
