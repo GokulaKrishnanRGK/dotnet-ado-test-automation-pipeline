@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="OpsLedger.App.Pages.ReportsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Reports"
+    BackgroundColor="{StaticResource PageBackground}">
+    <VerticalStackLayout Padding="24" Spacing="16">
+        <Label
+            Style="{StaticResource PageTitleLabel}"
+            Text="Reports"
+            TextColor="{StaticResource TextPrimary}" />
+        <Label Style="{StaticResource SecondaryLabel}" Text="Requests by status, category, resolution time, and SLA breach counts will appear here." />
+    </VerticalStackLayout>
+</ContentPage>
