@@ -11,29 +11,53 @@
                 Style="{StaticResource PageTitleLabel}"
                 Text="Create service request"
                 TextColor="{StaticResource TextPrimary}" />
-            <Entry AutomationId="RequestTitleEntry" Placeholder="Title" />
-            <Picker AutomationId="RequestCategoryPicker" Title="Category">
-                <Picker.Items>
-                    <x:String>IT</x:String>
-                    <x:String>Facilities</x:String>
-                    <x:String>HR</x:String>
-                    <x:String>Security</x:String>
-                    <x:String>Finance</x:String>
-                </Picker.Items>
-            </Picker>
-            <Picker AutomationId="RequestPriorityPicker" Title="Priority">
-                <Picker.Items>
-                    <x:String>Low</x:String>
-                    <x:String>Normal</x:String>
-                    <x:String>High</x:String>
-                    <x:String>Critical</x:String>
-                </Picker.Items>
-            </Picker>
-            <Editor AutomationId="RequestDescriptionEditor" AutoSize="TextChanges" Placeholder="Description" />
-            <Editor AutomationId="RequestImpactEditor" AutoSize="TextChanges" Placeholder="Impact details for critical requests" />
-            <Entry AutomationId="RequesterNameEntry" Placeholder="Requester name" />
-            <Entry AutomationId="RequesterEmailEntry" Keyboard="Email" Placeholder="Requester email" />
-            <Button AutomationId="SubmitRequestButton" Text="Submit request" />
+            <Entry
+                AutomationId="RequestTitleEntry"
+                Placeholder="Title"
+                Text="{Binding Title}" />
+            <Picker
+                AutomationId="RequestCategoryPicker"
+                ItemsSource="{Binding Categories}"
+                SelectedItem="{Binding Category}"
+                Title="Category" />
+            <Picker
+                AutomationId="RequestPriorityPicker"
+                ItemsSource="{Binding Priorities}"
+                SelectedItem="{Binding Priority}"
+                Title="Priority" />
+            <Editor
+                AutomationId="RequestDescriptionEditor"
+                AutoSize="TextChanges"
+                Placeholder="Description"
+                Text="{Binding Description}" />
+            <Editor
+                AutomationId="RequestImpactEditor"
+                AutoSize="TextChanges"
+                Placeholder="Impact details for critical requests"
+                Text="{Binding ImpactDetails}" />
+            <Entry
+                AutomationId="RequesterNameEntry"
+                Placeholder="Requester name"
+                Text="{Binding RequesterName}" />
+            <Entry
+                AutomationId="RequesterEmailEntry"
+                Keyboard="Email"
+                Placeholder="Requester email"
+                Text="{Binding RequesterEmail}" />
+            <Button
+                AutomationId="SubmitRequestButton"
+                Command="{Binding SubmitCommand}"
+                Text="Submit request" />
+            <Label
+                AutomationId="SubmitSuccessLabel"
+                Style="{StaticResource SecondaryLabel}"
+                Text="{Binding SuccessMessage}"
+                TextColor="{StaticResource Primary}" />
+            <Label
+                AutomationId="SubmitErrorLabel"
+                Style="{StaticResource SecondaryLabel}"
+                Text="{Binding ErrorMessage}"
+                TextColor="#EF767A" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

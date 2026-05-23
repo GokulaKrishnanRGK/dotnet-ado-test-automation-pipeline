@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\OpsLedger.Core\OpsLedger.Core.csproj" />
+    <ProjectReference Include="..\..\src\OpsLedger.Presentation\OpsLedger.Presentation.csproj" />
   </ItemGroup>
 
 </Project>
