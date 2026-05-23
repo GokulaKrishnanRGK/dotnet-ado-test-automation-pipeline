@@ -15,7 +15,9 @@ public sealed class ServiceRequest
         RequestStatus status,
         DateTimeOffset createdAt,
         DateTimeOffset slaDueAt,
-        IReadOnlyList<RequestActivity> activity)
+        IReadOnlyList<RequestActivity> activity,
+        string? assigneeName = null,
+        string? resolutionNotes = null)
     {
         Title = title;
         Category = category;
@@ -28,6 +30,8 @@ public sealed class ServiceRequest
         CreatedAt = createdAt;
         SlaDueAt = slaDueAt;
         Activity = activity;
+        AssigneeName = assigneeName;
+        ResolutionNotes = resolutionNotes;
     }
 
     public string Title { get; }
@@ -49,6 +53,10 @@ public sealed class ServiceRequest
     public DateTimeOffset CreatedAt { get; }
 
     public DateTimeOffset SlaDueAt { get; }
+
+    public string? AssigneeName { get; }
+
+    public string? ResolutionNotes { get; }
 
     public IReadOnlyList<RequestActivity> Activity { get; }
 }
