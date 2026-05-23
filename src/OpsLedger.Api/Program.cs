@@ -1,22 +1,22 @@
-using OpsLedger.Api;
+using OpsLedger.Api.Modules.Health;
+using OpsLedger.Api.Modules.ServiceRequests;
+using OpsLedger.Api.Modules.ServiceRequests.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton<IServiceRequestStore, InMemoryServiceRequestStore>();
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.MapGet("/health", () => Results.Ok(new HealthResponse("Healthy", "OpsLedger.Api")))
-    .WithName("GetHealth");
+app.MapHealthEndpoints();
+app.MapServiceRequestEndpoints();
 
 app.Run();
 
-namespace OpsLedger.Api
-{
-    public sealed record HealthResponse(string Status, string Service);
-}
+public partial class Program;
