@@ -12,6 +12,7 @@ public sealed record ServiceRequestApiResponse(
     DateTimeOffset SlaDueAt,
     string? AssigneeName,
     string? ResolutionNotes,
+    IReadOnlyList<ServiceRequestCommentApiResponse> Comments,
     IReadOnlyList<string> Activity)
 {
     public static ServiceRequestApiResponse From(ServiceRequest request)
@@ -31,6 +32,7 @@ public sealed record ServiceRequestApiResponse(
             request.SlaDueAt,
             request.AssigneeName,
             request.ResolutionNotes,
+            request.Comments.Select(ServiceRequestCommentApiResponse.From).ToArray(),
             request.Activity.Select(activity => activity.Type.ToString()).ToArray());
     }
 }
