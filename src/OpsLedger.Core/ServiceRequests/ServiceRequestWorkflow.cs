@@ -61,12 +61,58 @@ public static class ServiceRequestWorkflow
         return OperationResult<ServiceRequest>.Success(updated);
     }
 
+    public static OperationResult<ServiceRequest> AddComment(
+        ServiceRequest request,
+        AddServiceRequestCommentCommand command,
+        DateTimeOffset changedAt)
+    {
+        List<string> errors = new();
+
+        if (string.IsNullOrWhiteSpace(command.AuthorName))
+        {
+            errors.Add("Comment author is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(command.Body))
+        {
+            errors.Add("Comment body is required.");
+        }
+
+        if (errors.Count > 0)
+        {
+            return OperationResult<ServiceRequest>.Failure(errors);
+        }
+
+        string authorName = command.AuthorName.Trim();
+
+        ServiceRequest updated = Copy(
+            request,
+            request.Status,
+            request.AssigneeName,
+            request.ResolutionNotes,
+            AppendActivity(
+                request,
+                new RequestActivity(
+                    RequestActivityType.CommentAdded,
+                    changedAt,
+                    $"Comment added by {authorName}.")),
+            AppendComment(
+                request,
+                new RequestComment(
+                    authorName,
+                    command.Body.Trim(),
+                    changedAt)));
+
+        return OperationResult<ServiceRequest>.Success(updated);
+    }
+
     private static ServiceRequest Copy(
         ServiceRequest request,
         RequestStatus status,
         string? assigneeName,
         string? resolutionNotes,
-        IReadOnlyList<RequestActivity> activity)
+        IReadOnlyList<RequestActivity> activity,
+        IReadOnlyList<RequestComment>? comments = null)
     {
         return new ServiceRequest(
             request.Title,
@@ -80,6 +126,7 @@ public static class ServiceRequestWorkflow
             request.CreatedAt,
             request.SlaDueAt,
             activity,
+            comments ?? request.Comments,
             assigneeName,
             resolutionNotes);
     }
@@ -88,5 +135,11 @@ public static class ServiceRequestWorkflow
     {
         List<RequestActivity> activities = [.. request.Activity, activity];
         return activities;
+    }
+
+    private static IReadOnlyList<RequestComment> AppendComment(ServiceRequest request, RequestComment comment)
+    {
+        List<RequestComment> comments = [.. request.Comments, comment];
+        return comments;
     }
 }

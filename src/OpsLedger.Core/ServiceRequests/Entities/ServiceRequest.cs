@@ -16,6 +16,7 @@ public sealed class ServiceRequest
         DateTimeOffset createdAt,
         DateTimeOffset slaDueAt,
         IReadOnlyList<RequestActivity> activity,
+        IReadOnlyList<RequestComment>? comments = null,
         string? assigneeName = null,
         string? resolutionNotes = null)
     {
@@ -30,6 +31,7 @@ public sealed class ServiceRequest
         CreatedAt = createdAt;
         SlaDueAt = slaDueAt;
         Activity = activity;
+        Comments = comments ?? [];
         AssigneeName = assigneeName;
         ResolutionNotes = resolutionNotes;
     }
@@ -59,4 +61,6 @@ public sealed class ServiceRequest
     public string? ResolutionNotes { get; }
 
     public IReadOnlyList<RequestActivity> Activity { get; }
+
+    public IReadOnlyList<RequestComment> Comments { get; }
 }
