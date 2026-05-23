@@ -109,6 +109,60 @@ public sealed class ServiceRequestApiTests : IClassFixture<WebApplicationFactory
         body.Should().NotContain(item => item.Title == lowPriority.Title);
     }
 
+    [Fact]
+    public async Task Patch_assignment_assigns_request_and_moves_it_to_in_progress()
+    {
+        ServiceRequestApiResponse created = await CreateRequestAsync(NewRequest("Assign this request", "IT", "Normal"));
+
+        using HttpResponseMessage response = await _client.PatchAsJsonAsync(
+            $"/service-requests/{created.Id}/assignment",
+            new AssignServiceRequestApiRequest("Morgan Lee"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        ServiceRequestApiResponse? body = await response.Content.ReadFromJsonAsync<ServiceRequestApiResponse>();
+        body.Should().NotBeNull();
+        body!.Id.Should().Be(created.Id);
+        body.Status.Should().Be("InProgress");
+        body.AssigneeName.Should().Be("Morgan Lee");
+        body.Activity.Should().Contain("Assigned");
+    }
+
+    [Fact]
+    public async Task Patch_resolution_requires_resolution_notes()
+    {
+        ServiceRequestApiResponse created = await CreateRequestAsync(NewRequest("Reject empty resolution", "Facilities", "Normal"));
+
+        using HttpResponseMessage response = await _client.PatchAsJsonAsync(
+            $"/service-requests/{created.Id}/resolution",
+            new ResolveServiceRequestApiRequest(""));
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        ValidationErrorResponse? body = await response.Content.ReadFromJsonAsync<ValidationErrorResponse>();
+        body.Should().NotBeNull();
+        body!.Errors.Should().Contain("Resolution notes are required.");
+    }
+
+    [Fact]
+    public async Task Patch_resolution_resolves_request_with_notes()
+    {
+        ServiceRequestApiResponse created = await CreateRequestAsync(NewRequest("Resolve this request", "Facilities", "Normal"));
+
+        using HttpResponseMessage response = await _client.PatchAsJsonAsync(
+            $"/service-requests/{created.Id}/resolution",
+            new ResolveServiceRequestApiRequest("Display replaced and verified."));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        ServiceRequestApiResponse? body = await response.Content.ReadFromJsonAsync<ServiceRequestApiResponse>();
+        body.Should().NotBeNull();
+        body!.Id.Should().Be(created.Id);
+        body.Status.Should().Be("Resolved");
+        body.ResolutionNotes.Should().Be("Display replaced and verified.");
+        body.Activity.Should().Contain("Resolved");
+    }
+
     private static CreateServiceRequestApiRequest NewRequest(
         string title,
         string category,
@@ -123,6 +177,21 @@ public sealed class ServiceRequestApiTests : IClassFixture<WebApplicationFactory
             RequesterEmail: "casey.morgan@example.com",
             ImpactDetails: priority == "Critical" ? "Critical business impact." : null);
     }
+
+    private async Task<ServiceRequestApiResponse> CreateRequestAsync(CreateServiceRequestApiRequest request)
+    {
+        using HttpResponseMessage response = await _client.PostAsJsonAsync("/service-requests", request);
+        response.EnsureSuccessStatusCode();
+
+        ServiceRequestApiResponse? body = await response.Content.ReadFromJsonAsync<ServiceRequestApiResponse>();
+        body.Should().NotBeNull();
+
+        return body!;
+    }
+
+    private sealed record AssignServiceRequestApiRequest(string AssigneeName);
+
+    private sealed record ResolveServiceRequestApiRequest(string ResolutionNotes);
 
     private sealed record CreateServiceRequestApiRequest(
         string Title,
@@ -141,6 +210,8 @@ public sealed class ServiceRequestApiTests : IClassFixture<WebApplicationFactory
         string Status,
         DateTimeOffset CreatedAt,
         DateTimeOffset SlaDueAt,
+        string? AssigneeName,
+        string? ResolutionNotes,
         IReadOnlyList<string> Activity);
 
     private sealed record ValidationErrorResponse(IReadOnlyList<string> Errors);

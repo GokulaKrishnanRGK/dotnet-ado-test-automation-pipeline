@@ -1,4 +1,5 @@
 using OpsLedger.Api.Modules.ServiceRequests.Dto;
+using OpsLedger.Api.Modules.ServiceRequests.Models;
 using OpsLedger.Api.Modules.ServiceRequests.Services;
 using OpsLedger.Core.Common.Models;
 using OpsLedger.Core.ServiceRequests;
@@ -17,6 +18,12 @@ public static class ServiceRequestEndpoints
 
         endpoints.MapPost("/service-requests", CreateServiceRequest)
             .WithName("CreateServiceRequest");
+
+        endpoints.MapPatch("/service-requests/{id}/assignment", AssignServiceRequest)
+            .WithName("AssignServiceRequest");
+
+        endpoints.MapPatch("/service-requests/{id}/resolution", ResolveServiceRequest)
+            .WithName("ResolveServiceRequest");
 
         return endpoints;
     }
@@ -67,9 +74,61 @@ public static class ServiceRequestEndpoints
             return Results.BadRequest(new ValidationErrorResponse(result.Errors));
         }
 
-        ServiceRequestApiResponse response = ServiceRequestApiResponse.From(result.Value);
-        store.Add(response);
+        StoredServiceRequest storedRequest = store.Add(result.Value);
+        ServiceRequestApiResponse response = ServiceRequestApiResponse.From(storedRequest.Id, storedRequest.Request);
 
         return Results.Created($"/service-requests/{response.Id}", response);
+    }
+
+    private static IResult AssignServiceRequest(
+        string id,
+        AssignServiceRequestApiRequest request,
+        IServiceRequestStore store)
+    {
+        StoredServiceRequest? storedRequest = store.Get(id);
+
+        if (storedRequest is null)
+        {
+            return Results.NotFound();
+        }
+
+        OperationResult<ServiceRequest> result = ServiceRequestWorkflow.Assign(
+            storedRequest.Request,
+            new AssignServiceRequestCommand(request.AssigneeName),
+            DateTimeOffset.UtcNow);
+
+        if (!result.IsSuccess)
+        {
+            return Results.BadRequest(new ValidationErrorResponse(result.Errors));
+        }
+
+        StoredServiceRequest updated = store.Update(storedRequest.Id, result.Value);
+        return Results.Ok(ServiceRequestApiResponse.From(updated.Id, updated.Request));
+    }
+
+    private static IResult ResolveServiceRequest(
+        string id,
+        ResolveServiceRequestApiRequest request,
+        IServiceRequestStore store)
+    {
+        StoredServiceRequest? storedRequest = store.Get(id);
+
+        if (storedRequest is null)
+        {
+            return Results.NotFound();
+        }
+
+        OperationResult<ServiceRequest> result = ServiceRequestWorkflow.Resolve(
+            storedRequest.Request,
+            new ResolveServiceRequestCommand(request.ResolutionNotes),
+            DateTimeOffset.UtcNow);
+
+        if (!result.IsSuccess)
+        {
+            return Results.BadRequest(new ValidationErrorResponse(result.Errors));
+        }
+
+        StoredServiceRequest updated = store.Update(storedRequest.Id, result.Value);
+        return Results.Ok(ServiceRequestApiResponse.From(updated.Id, updated.Request));
     }
 }
