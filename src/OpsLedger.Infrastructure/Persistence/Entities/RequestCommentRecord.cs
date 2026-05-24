@@ -1,4 +1,4 @@
-namespace OpsLedger.Infrastructure.Database.Entities;
+namespace OpsLedger.Infrastructure.Persistence.Entities;
 
 public sealed class RequestCommentRecord
 {
