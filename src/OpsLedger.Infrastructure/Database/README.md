@@ -31,7 +31,7 @@ dotnet tool restore
 Create migrations from the infrastructure project and use the API project as startup configuration:
 
 ```bash
-dotnet ef migrations add <MigrationName> \
+OPSLEDGER_CONNECTION_STRING="$OPSLEDGER_CONNECTION_STRING" dotnet dotnet-ef migrations add <MigrationName> \
   --project src/OpsLedger.Infrastructure \
   --startup-project src/OpsLedger.Api \
   --context OpsLedgerDbContext \
@@ -41,7 +41,7 @@ dotnet ef migrations add <MigrationName> \
 Apply migrations:
 
 ```bash
-dotnet ef database update \
+OPSLEDGER_CONNECTION_STRING="$OPSLEDGER_CONNECTION_STRING" dotnet dotnet-ef database update \
   --project src/OpsLedger.Infrastructure \
   --startup-project src/OpsLedger.Api \
   --context OpsLedgerDbContext
@@ -50,7 +50,7 @@ dotnet ef database update \
 Generate idempotent SQL for CI/Azure DevOps environment setup:
 
 ```bash
-dotnet ef migrations script --idempotent \
+OPSLEDGER_CONNECTION_STRING="$OPSLEDGER_CONNECTION_STRING" dotnet dotnet-ef migrations script --idempotent \
   --project src/OpsLedger.Infrastructure \
   --startup-project src/OpsLedger.Api \
   --context OpsLedgerDbContext \
@@ -63,7 +63,7 @@ Rules:
 - Stored procedure/function changes are applied by migrations with `migrationBuilder.Sql(...)`.
 - Readable SQL mirrors may live in `Database/procedures/`, but migrations remain the deployment source of truth.
 - Every stored procedure write migration needs integration tests for successful commit and rollback behavior.
-- Do not commit real connection strings or environment-specific database names.
+- Do not commit real environment values or environment-specific database names.
 
 ## PostgreSQL Integration Tests
 

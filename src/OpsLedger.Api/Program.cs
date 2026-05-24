@@ -9,16 +9,16 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 
-string? opsLedgerConnectionString = builder.Configuration.GetConnectionString("OpsLedger");
+string? databaseConfiguration = Environment.GetEnvironmentVariable("OPSLEDGER_CONNECTION_STRING");
 
-if (string.IsNullOrWhiteSpace(opsLedgerConnectionString))
+if (string.IsNullOrWhiteSpace(databaseConfiguration))
 {
     builder.Services.AddSingleton<IServiceRequestStore, InMemoryServiceRequestStore>();
 }
 else
 {
     builder.Services.AddDbContext<OpsLedgerDbContext>(options =>
-        options.UseNpgsql(opsLedgerConnectionString));
+        options.UseNpgsql(databaseConfiguration));
     builder.Services.AddScoped<PostgreSqlServiceRequestRepository>();
     builder.Services.AddScoped<IServiceRequestStore, PostgreSqlServiceRequestStore>();
 }

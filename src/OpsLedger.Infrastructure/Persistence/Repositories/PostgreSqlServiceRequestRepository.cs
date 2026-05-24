@@ -13,21 +13,8 @@ public sealed class PostgreSqlServiceRequestRepository(OpsLedgerDbContext dbCont
     {
         string id = Guid.NewGuid().ToString("N");
 
-        await dbContext.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             SELECT opsledger_create_service_request(
-                 {id},
-                 {request.Title},
-                 {request.Category.ToString()},
-                 {request.Priority.ToString()},
-                 {request.Description},
-                 {request.RequesterName},
-                 {request.RequesterEmail},
-                 {request.ImpactDetails},
-                 {request.Status.ToString()},
-                 {request.CreatedAt},
-                 {request.SlaDueAt})
-             """,
+        await dbContext.Database.ExecuteSqlAsync(
+            PostgreSqlRoutineCall.CreateServiceRequest(id, request),
             cancellationToken);
 
         PersistedServiceRequest? persisted = await GetAsync(id, cancellationToken);
@@ -38,10 +25,12 @@ public sealed class PostgreSqlServiceRequestRepository(OpsLedgerDbContext dbCont
         string id,
         CancellationToken cancellationToken = default)
     {
-        ServiceRequestRecord? record = await QueryRequests()
-            .SingleOrDefaultAsync(
-                request => request.Id == id,
-                cancellationToken);
+        ServiceRequestRecord? record = await dbContext.ServiceRequests
+            .FromSql(PostgreSqlRoutineCall.GetServiceRequest(id))
+            .AsNoTracking()
+            .Include(request => request.Activity)
+            .Include(request => request.Comments)
+            .SingleOrDefaultAsync(cancellationToken);
 
         return record is null ? null : ToPersisted(record);
     }
@@ -51,20 +40,11 @@ public sealed class PostgreSqlServiceRequestRepository(OpsLedgerDbContext dbCont
         string? priority,
         CancellationToken cancellationToken = default)
     {
-        IQueryable<ServiceRequestRecord> query = QueryRequests();
-
-        if (!string.IsNullOrWhiteSpace(status) && status != "All")
-        {
-            query = query.Where(request => request.Status == status.Trim());
-        }
-
-        if (!string.IsNullOrWhiteSpace(priority) && priority != "All")
-        {
-            query = query.Where(request => request.Priority == priority.Trim());
-        }
-
-        List<ServiceRequestRecord> records = await query
-            .OrderByDescending(request => request.CreatedAt)
+        List<ServiceRequestRecord> records = await dbContext.ServiceRequests
+            .FromSql(PostgreSqlRoutineCall.ListServiceRequests(status, priority))
+            .AsNoTracking()
+            .Include(request => request.Activity)
+            .Include(request => request.Comments)
             .ToListAsync(cancellationToken);
 
         return records.Select(ToPersisted).ToArray();
@@ -77,13 +57,8 @@ public sealed class PostgreSqlServiceRequestRepository(OpsLedgerDbContext dbCont
     {
         RequestActivity activity = request.Activity.Last(item => item.Type == RequestActivityType.Assigned);
 
-        await dbContext.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             SELECT opsledger_assign_service_request(
-                 {id},
-                 {request.AssigneeName},
-                 {activity.OccurredAt})
-             """,
+        await dbContext.Database.ExecuteSqlAsync(
+            PostgreSqlRoutineCall.AssignServiceRequest(id, request.AssigneeName, activity.OccurredAt),
             cancellationToken);
 
         PersistedServiceRequest? persisted = await GetAsync(id, cancellationToken);
@@ -97,13 +72,8 @@ public sealed class PostgreSqlServiceRequestRepository(OpsLedgerDbContext dbCont
     {
         RequestActivity activity = request.Activity.Last(item => item.Type == RequestActivityType.Resolved);
 
-        await dbContext.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             SELECT opsledger_resolve_service_request(
-                 {id},
-                 {request.ResolutionNotes},
-                 {activity.OccurredAt})
-             """,
+        await dbContext.Database.ExecuteSqlAsync(
+            PostgreSqlRoutineCall.ResolveServiceRequest(id, request.ResolutionNotes, activity.OccurredAt),
             cancellationToken);
 
         PersistedServiceRequest? persisted = await GetAsync(id, cancellationToken);
@@ -117,26 +87,12 @@ public sealed class PostgreSqlServiceRequestRepository(OpsLedgerDbContext dbCont
     {
         RequestComment comment = request.Comments.Last();
 
-        await dbContext.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             SELECT opsledger_add_service_request_comment(
-                 {id},
-                 {comment.AuthorName},
-                 {comment.Body},
-                 {comment.CreatedAt})
-             """,
+        await dbContext.Database.ExecuteSqlAsync(
+            PostgreSqlRoutineCall.AddServiceRequestComment(id, comment),
             cancellationToken);
 
         PersistedServiceRequest? persisted = await GetAsync(id, cancellationToken);
         return persisted ?? throw new InvalidOperationException("The commented service request could not be loaded.");
-    }
-
-    private IQueryable<ServiceRequestRecord> QueryRequests()
-    {
-        return dbContext.ServiceRequests
-            .AsNoTracking()
-            .Include(request => request.Activity)
-            .Include(request => request.Comments);
     }
 
     private static PersistedServiceRequest ToPersisted(ServiceRequestRecord record)

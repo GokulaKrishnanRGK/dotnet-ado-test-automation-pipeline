@@ -63,7 +63,7 @@ public sealed class PostgreSqlServiceRequestApiTests : IClassFixture<PostgreSqlF
     private OpsLedgerDbContext CreateDbContext()
     {
         DbContextOptionsBuilder<OpsLedgerDbContext> optionsBuilder = new();
-        optionsBuilder.UseNpgsql(fixture.ConnectionString);
+        optionsBuilder.UseNpgsql(fixture.DatabaseConfiguration);
         return new OpsLedgerDbContext(optionsBuilder.Options);
     }
 
