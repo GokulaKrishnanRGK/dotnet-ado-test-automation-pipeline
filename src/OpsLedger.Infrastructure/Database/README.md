@@ -22,6 +22,12 @@ src/OpsLedger.Infrastructure/
     procedures/
 ```
 
+Restore local tools before running migration commands:
+
+```bash
+dotnet tool restore
+```
+
 Create migrations from the infrastructure project and use the API project as startup configuration:
 
 ```bash
@@ -58,3 +64,13 @@ Rules:
 - Readable SQL mirrors may live in `Database/procedures/`, but migrations remain the deployment source of truth.
 - Every stored procedure write migration needs integration tests for successful commit and rollback behavior.
 - Do not commit real connection strings or environment-specific database names.
+
+## PostgreSQL Integration Tests
+
+PostgreSQL Testcontainers tests are opt-in locally because they require Docker.
+
+```bash
+OPSLEDGER_RUN_POSTGRES_TESTS=true dotnet test tests/OpsLedger.IntegrationTests/OpsLedger.IntegrationTests.csproj
+```
+
+The default integration test command skips PostgreSQL container tests when `OPSLEDGER_RUN_POSTGRES_TESTS` is not set to `true`.

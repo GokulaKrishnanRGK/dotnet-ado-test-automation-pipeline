@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using OpsLedger.Infrastructure.Database.Entities;
+using OpsLedger.Infrastructure.Persistence.Entities;
 
-namespace OpsLedger.Infrastructure.Database;
+namespace OpsLedger.Infrastructure.Persistence;
 
 public sealed class OpsLedgerDbContext : DbContext
 {

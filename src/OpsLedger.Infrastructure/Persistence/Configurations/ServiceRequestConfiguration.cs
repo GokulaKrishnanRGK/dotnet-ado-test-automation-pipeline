@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using OpsLedger.Infrastructure.Database.Entities;
+using OpsLedger.Infrastructure.Persistence.Entities;
 
-namespace OpsLedger.Infrastructure.Database.Configuration;
+namespace OpsLedger.Infrastructure.Persistence.Configurations;
 
 internal sealed class ServiceRequestConfiguration : IEntityTypeConfiguration<ServiceRequestRecord>
 {
