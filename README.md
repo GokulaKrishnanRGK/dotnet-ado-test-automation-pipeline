@@ -54,17 +54,32 @@ flowchart TD
 10. Run BDD validation in Azure DevOps.
 11. Publish results, send notifications, and create deduplicated work items for failed scenarios.
 
-## Current Status
+## Publish Artifacts
 
-This repository is in the planning and scaffolding phase. The project documentation now targets OpsLedger as a .NET MAUI, ASP.NET Core, and PostgreSQL on-premise application; the solution and CI/CD implementation are next.
+Local Apple Silicon verification publishes the MAUI Mac Catalyst artifact:
 
-## Documentation
+```powershell
+pwsh ./scripts/Publish-OpsLedgerApp.ps1 -Target maccatalyst-arm64
+```
 
-Detailed planning and workflow docs live in `docs/`, including:
+Pipeline Windows artifact publishing should run on Windows:
 
-- `PLAN.md`
-- `MILESTONES.md`
-- `PROJECT_STATE.md`
-- `ARCHITECTURE_OVERVIEW.md`
-- `AGENT_WORKFLOW.md`
-- `EXTERNAL_SETUP.md`
+```powershell
+pwsh ./scripts/Publish-OpsLedgerApp.ps1 -Target win-x64 -CommitSha $env:GITHUB_SHA
+```
+
+The manual GitHub Actions workflow `.github/workflows/publish-windows-artifact.yml` runs the same command on a Windows runner and uploads the `win-x64` artifact.
+
+Validate an artifact before passing it to the BDD environment:
+
+```powershell
+pwsh ./scripts/Test-OpsLedgerArtifact.ps1 -ArtifactPath artifacts/opsledger-app-win-x64-<short-sha>
+```
+
+Artifacts use the naming pattern:
+
+```text
+opsledger-app-<target>-<short-commit-sha>
+```
+
+Each artifact includes `opsledger-artifact.json` metadata with schema version, target, framework, runtime, configuration, repository, source branch, full commit SHA, short commit SHA, and expected payload. The Azure DevOps BDD stage should use this metadata as the handoff contract for traceability.
