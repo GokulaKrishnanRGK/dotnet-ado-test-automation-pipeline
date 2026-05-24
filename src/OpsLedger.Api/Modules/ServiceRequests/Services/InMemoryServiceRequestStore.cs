@@ -9,26 +9,76 @@ public sealed class InMemoryServiceRequestStore : IServiceRequestStore
     private readonly Lock _sync = new();
     private readonly List<StoredServiceRequest> _requests = [];
 
-    public StoredServiceRequest Add(ServiceRequest request)
+    public Task<StoredServiceRequest> AddAsync(
+        ServiceRequest request,
+        CancellationToken cancellationToken = default)
     {
         lock (_sync)
         {
             StoredServiceRequest storedRequest = new(Guid.NewGuid().ToString("N"), request);
             _requests.Add(storedRequest);
-            return storedRequest;
+            return Task.FromResult(storedRequest);
         }
     }
 
-    public StoredServiceRequest? Get(string id)
+    public Task<StoredServiceRequest?> GetAsync(
+        string id,
+        CancellationToken cancellationToken = default)
     {
         lock (_sync)
         {
-            return _requests.SingleOrDefault(request =>
+            StoredServiceRequest? request = _requests.SingleOrDefault(request =>
                 string.Equals(request.Id, id, StringComparison.OrdinalIgnoreCase));
+            return Task.FromResult(request);
         }
     }
 
-    public StoredServiceRequest Update(string id, ServiceRequest request)
+    public Task<StoredServiceRequest> AssignAsync(
+        string id,
+        ServiceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return UpdateAsync(id, request, cancellationToken);
+    }
+
+    public Task<StoredServiceRequest> ResolveAsync(
+        string id,
+        ServiceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return UpdateAsync(id, request, cancellationToken);
+    }
+
+    public Task<StoredServiceRequest> AddCommentAsync(
+        string id,
+        ServiceRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return UpdateAsync(id, request, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<ServiceRequestApiResponse>> ListAsync(
+        string? status,
+        string? priority,
+        CancellationToken cancellationToken = default)
+    {
+        lock (_sync)
+        {
+            IReadOnlyList<ServiceRequestApiResponse> requests = _requests
+                .Select(request => ServiceRequestApiResponse.From(request.Id, request.Request))
+                .Where(request => Matches(request.Status, status))
+                .Where(request => Matches(request.Priority, priority))
+                .OrderByDescending(request => request.CreatedAt)
+                .ToArray();
+
+            return Task.FromResult(requests);
+        }
+    }
+
+    private Task<StoredServiceRequest> UpdateAsync(
+        string id,
+        ServiceRequest request,
+        CancellationToken cancellationToken)
     {
         lock (_sync)
         {
@@ -37,20 +87,7 @@ public sealed class InMemoryServiceRequestStore : IServiceRequestStore
 
             StoredServiceRequest updated = new(id, request);
             _requests[index] = updated;
-            return updated;
-        }
-    }
-
-    public IReadOnlyList<ServiceRequestApiResponse> List(string? status, string? priority)
-    {
-        lock (_sync)
-        {
-            return _requests
-                .Select(request => ServiceRequestApiResponse.From(request.Id, request.Request))
-                .Where(request => Matches(request.Status, status))
-                .Where(request => Matches(request.Priority, priority))
-                .OrderByDescending(request => request.CreatedAt)
-                .ToArray();
+            return Task.FromResult(updated);
         }
     }
 

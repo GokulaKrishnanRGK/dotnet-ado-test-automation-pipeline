@@ -34,20 +34,22 @@ public static class ServiceRequestEndpoints
         return endpoints;
     }
 
-    private static IResult ListServiceRequests(
+    private static async Task<IResult> ListServiceRequests(
         IServiceRequestStore store,
         string? status,
-        string? priority)
+        string? priority,
+        CancellationToken cancellationToken)
     {
-        IReadOnlyList<ServiceRequestApiResponse> requests = store.List(status, priority);
+        IReadOnlyList<ServiceRequestApiResponse> requests = await store.ListAsync(status, priority, cancellationToken);
         return Results.Ok(requests);
     }
 
-    private static IResult GetServiceRequest(
+    private static async Task<IResult> GetServiceRequest(
         string id,
-        IServiceRequestStore store)
+        IServiceRequestStore store,
+        CancellationToken cancellationToken)
     {
-        StoredServiceRequest? storedRequest = store.Get(id);
+        StoredServiceRequest? storedRequest = await store.GetAsync(id, cancellationToken);
 
         if (storedRequest is null)
         {
@@ -57,9 +59,10 @@ public static class ServiceRequestEndpoints
         return Results.Ok(ServiceRequestApiResponse.From(storedRequest.Id, storedRequest.Request));
     }
 
-    private static IResult CreateServiceRequest(
+    private static async Task<IResult> CreateServiceRequest(
         CreateServiceRequestApiRequest request,
-        IServiceRequestStore store)
+        IServiceRequestStore store,
+        CancellationToken cancellationToken)
     {
         List<string> errors = new();
 
@@ -94,18 +97,19 @@ public static class ServiceRequestEndpoints
             return Results.BadRequest(new ValidationErrorResponse(result.Errors));
         }
 
-        StoredServiceRequest storedRequest = store.Add(result.Value);
+        StoredServiceRequest storedRequest = await store.AddAsync(result.Value, cancellationToken);
         ServiceRequestApiResponse response = ServiceRequestApiResponse.From(storedRequest.Id, storedRequest.Request);
 
         return Results.Created($"/service-requests/{response.Id}", response);
     }
 
-    private static IResult AssignServiceRequest(
+    private static async Task<IResult> AssignServiceRequest(
         string id,
         AssignServiceRequestApiRequest request,
-        IServiceRequestStore store)
+        IServiceRequestStore store,
+        CancellationToken cancellationToken)
     {
-        StoredServiceRequest? storedRequest = store.Get(id);
+        StoredServiceRequest? storedRequest = await store.GetAsync(id, cancellationToken);
 
         if (storedRequest is null)
         {
@@ -122,16 +126,17 @@ public static class ServiceRequestEndpoints
             return Results.BadRequest(new ValidationErrorResponse(result.Errors));
         }
 
-        StoredServiceRequest updated = store.Update(storedRequest.Id, result.Value);
+        StoredServiceRequest updated = await store.AssignAsync(storedRequest.Id, result.Value, cancellationToken);
         return Results.Ok(ServiceRequestApiResponse.From(updated.Id, updated.Request));
     }
 
-    private static IResult ResolveServiceRequest(
+    private static async Task<IResult> ResolveServiceRequest(
         string id,
         ResolveServiceRequestApiRequest request,
-        IServiceRequestStore store)
+        IServiceRequestStore store,
+        CancellationToken cancellationToken)
     {
-        StoredServiceRequest? storedRequest = store.Get(id);
+        StoredServiceRequest? storedRequest = await store.GetAsync(id, cancellationToken);
 
         if (storedRequest is null)
         {
@@ -148,16 +153,17 @@ public static class ServiceRequestEndpoints
             return Results.BadRequest(new ValidationErrorResponse(result.Errors));
         }
 
-        StoredServiceRequest updated = store.Update(storedRequest.Id, result.Value);
+        StoredServiceRequest updated = await store.ResolveAsync(storedRequest.Id, result.Value, cancellationToken);
         return Results.Ok(ServiceRequestApiResponse.From(updated.Id, updated.Request));
     }
 
-    private static IResult AddServiceRequestComment(
+    private static async Task<IResult> AddServiceRequestComment(
         string id,
         AddServiceRequestCommentApiRequest request,
-        IServiceRequestStore store)
+        IServiceRequestStore store,
+        CancellationToken cancellationToken)
     {
-        StoredServiceRequest? storedRequest = store.Get(id);
+        StoredServiceRequest? storedRequest = await store.GetAsync(id, cancellationToken);
 
         if (storedRequest is null)
         {
@@ -174,7 +180,7 @@ public static class ServiceRequestEndpoints
             return Results.BadRequest(new ValidationErrorResponse(result.Errors));
         }
 
-        StoredServiceRequest updated = store.Update(storedRequest.Id, result.Value);
+        StoredServiceRequest updated = await store.AddCommentAsync(storedRequest.Id, result.Value, cancellationToken);
         return Results.Ok(ServiceRequestApiResponse.From(updated.Id, updated.Request));
     }
 }

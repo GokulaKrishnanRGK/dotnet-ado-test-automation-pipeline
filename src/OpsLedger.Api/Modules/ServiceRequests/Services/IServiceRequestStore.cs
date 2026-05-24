@@ -6,11 +6,31 @@ namespace OpsLedger.Api.Modules.ServiceRequests.Services;
 
 public interface IServiceRequestStore
 {
-    StoredServiceRequest Add(ServiceRequest request);
+    Task<StoredServiceRequest> AddAsync(
+        ServiceRequest request,
+        CancellationToken cancellationToken = default);
 
-    StoredServiceRequest? Get(string id);
+    Task<StoredServiceRequest?> GetAsync(
+        string id,
+        CancellationToken cancellationToken = default);
 
-    StoredServiceRequest Update(string id, ServiceRequest request);
+    Task<StoredServiceRequest> AssignAsync(
+        string id,
+        ServiceRequest request,
+        CancellationToken cancellationToken = default);
 
-    IReadOnlyList<ServiceRequestApiResponse> List(string? status, string? priority);
+    Task<StoredServiceRequest> ResolveAsync(
+        string id,
+        ServiceRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<StoredServiceRequest> AddCommentAsync(
+        string id,
+        ServiceRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ServiceRequestApiResponse>> ListAsync(
+        string? status,
+        string? priority,
+        CancellationToken cancellationToken = default);
 }
