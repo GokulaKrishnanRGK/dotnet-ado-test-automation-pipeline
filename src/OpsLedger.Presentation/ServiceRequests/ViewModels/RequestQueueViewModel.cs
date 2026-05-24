@@ -19,7 +19,7 @@ public sealed class RequestQueueViewModel : ObservableObject
         LoadCommand = new AsyncRelayCommand(() => LoadAsync());
     }
 
-    public IReadOnlyList<string> Statuses { get; } = ["All", "New", "InProgress", "Resolved", "Closed"];
+    public IReadOnlyList<string> Statuses { get; } = ["All", "New", "InProgress", "Blocked", "Resolved"];
 
     public IReadOnlyList<string> Priorities { get; } = ["All", "Low", "Normal", "High", "Critical"];
 

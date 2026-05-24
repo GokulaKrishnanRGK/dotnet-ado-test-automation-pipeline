@@ -15,29 +15,95 @@
                 <Border Style="{StaticResource MetricCard}">
                     <VerticalStackLayout>
                         <Label Style="{StaticResource SecondaryLabel}" Text="New" />
-                        <Label FontAttributes="Bold" FontSize="24" Text="0" />
+                        <Label
+                            AutomationId="NewRequestCountLabel"
+                            FontAttributes="Bold"
+                            FontSize="24"
+                            Text="{Binding NewCount}" />
                     </VerticalStackLayout>
                 </Border>
                 <Border Grid.Column="1" Style="{StaticResource MetricCard}">
                     <VerticalStackLayout>
                         <Label Style="{StaticResource SecondaryLabel}" Text="In Progress" />
-                        <Label FontAttributes="Bold" FontSize="24" Text="0" />
+                        <Label
+                            AutomationId="InProgressRequestCountLabel"
+                            FontAttributes="Bold"
+                            FontSize="24"
+                            Text="{Binding InProgressCount}" />
                     </VerticalStackLayout>
                 </Border>
                 <Border Grid.Column="2" Style="{StaticResource MetricCard}">
                     <VerticalStackLayout>
                         <Label Style="{StaticResource SecondaryLabel}" Text="Blocked" />
-                        <Label FontAttributes="Bold" FontSize="24" Text="0" />
+                        <Label
+                            AutomationId="BlockedRequestCountLabel"
+                            FontAttributes="Bold"
+                            FontSize="24"
+                            Text="{Binding BlockedCount}" />
                     </VerticalStackLayout>
                 </Border>
                 <Border Grid.Column="3" Style="{StaticResource MetricCard}">
                     <VerticalStackLayout>
                         <Label Style="{StaticResource SecondaryLabel}" Text="Resolved" />
-                        <Label FontAttributes="Bold" FontSize="24" Text="0" />
+                        <Label
+                            AutomationId="ResolvedRequestCountLabel"
+                            FontAttributes="Bold"
+                            FontSize="24"
+                            Text="{Binding ResolvedCount}" />
                     </VerticalStackLayout>
                 </Border>
             </Grid>
-            <Label Style="{StaticResource SecondaryLabel}" Text="Recent and high-priority requests will appear here after the request workflow is implemented." />
+            <Border Style="{StaticResource MetricCard}">
+                <Grid ColumnDefinitions="*,Auto">
+                    <Label Style="{StaticResource SecondaryLabel}" Text="Critical open requests" />
+                    <Label
+                        Grid.Column="1"
+                        AutomationId="CriticalOpenRequestCountLabel"
+                        FontAttributes="Bold"
+                        Text="{Binding CriticalOpenCount}" />
+                </Grid>
+            </Border>
+            <Label
+                AutomationId="DashboardErrorLabel"
+                Style="{StaticResource SecondaryLabel}"
+                Text="{Binding ErrorMessage}"
+                TextColor="#EF767A" />
+            <Label FontAttributes="Bold" Text="Recent requests" />
+            <CollectionView
+                AutomationId="RecentRequestsList"
+                ItemsSource="{Binding RecentRequests}">
+                <CollectionView.EmptyView>
+                    <Label Style="{StaticResource SecondaryLabel}" Text="No service requests have been submitted." />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border
+                            Margin="0,0,0,10"
+                            Padding="14"
+                            Style="{StaticResource MetricCard}">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="6">
+                                <Label
+                                    FontAttributes="Bold"
+                                    Text="{Binding Title}"
+                                    TextColor="{StaticResource TextPrimary}" />
+                                <Label
+                                    Grid.Column="1"
+                                    Text="{Binding Priority}"
+                                    TextColor="{StaticResource Accent}" />
+                                <Label
+                                    Grid.Row="1"
+                                    Style="{StaticResource SecondaryLabel}"
+                                    Text="{Binding Status}" />
+                                <Label
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Style="{StaticResource SecondaryLabel}"
+                                    Text="{Binding Category}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>
