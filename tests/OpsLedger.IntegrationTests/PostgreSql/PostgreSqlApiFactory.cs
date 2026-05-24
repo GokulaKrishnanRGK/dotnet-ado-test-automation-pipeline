@@ -1,21 +1,24 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
-
 namespace OpsLedger.IntegrationTests.PostgreSql;
 
-public sealed class PostgreSqlApiFactory(string connectionString) : WebApplicationFactory<Program>
+public sealed class PostgreSqlApiFactory : WebApplicationFactory<Program>
 {
+    private readonly string? originalDatabaseConfiguration;
+
+    public PostgreSqlApiFactory(string databaseConfiguration)
+    {
+        originalDatabaseConfiguration = Environment.GetEnvironmentVariable("OPSLEDGER_CONNECTION_STRING");
+        Environment.SetEnvironmentVariable("OPSLEDGER_CONNECTION_STRING", databaseConfiguration);
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.ConfigureAppConfiguration(configuration =>
-        {
-            Dictionary<string, string?> settings = new()
-            {
-                ["ConnectionStrings:OpsLedger"] = connectionString
-            };
+    }
 
-            configuration.AddInMemoryCollection(settings);
-        });
+    protected override void Dispose(bool disposing)
+    {
+        Environment.SetEnvironmentVariable("OPSLEDGER_CONNECTION_STRING", originalDatabaseConfiguration);
+        base.Dispose(disposing);
     }
 }

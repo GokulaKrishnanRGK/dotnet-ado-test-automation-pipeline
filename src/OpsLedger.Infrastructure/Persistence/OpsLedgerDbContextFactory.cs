@@ -9,10 +9,10 @@ public sealed class OpsLedgerDbContextFactory : IDesignTimeDbContextFactory<OpsL
     {
         DbContextOptionsBuilder<OpsLedgerDbContext> optionsBuilder = new();
 
-        string connectionString = Environment.GetEnvironmentVariable("OPSLEDGER_CONNECTION_STRING") ??
-            "Host=localhost;Port=5432;Database=opsledger;Username=opsledger;Password=opsledger";
+        string databaseConfiguration = Environment.GetEnvironmentVariable("OPSLEDGER_CONNECTION_STRING") ??
+            throw new InvalidOperationException("OPSLEDGER_CONNECTION_STRING must be set to run EF Core design-time commands.");
 
-        optionsBuilder.UseNpgsql(connectionString);
+        optionsBuilder.UseNpgsql(databaseConfiguration);
 
         return new OpsLedgerDbContext(optionsBuilder.Options);
     }

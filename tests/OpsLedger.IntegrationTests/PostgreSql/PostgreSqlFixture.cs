@@ -10,19 +10,19 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
 
     public PostgreSqlApiFactory Factory { get; private set; } = null!;
 
-    public string ConnectionString => container.GetConnectionString();
+    public string DatabaseConfiguration => container.GetConnectionString();
 
     public async Task InitializeAsync()
     {
         await container.StartAsync();
 
         DbContextOptionsBuilder<OpsLedgerDbContext> optionsBuilder = new();
-        optionsBuilder.UseNpgsql(ConnectionString);
+        optionsBuilder.UseNpgsql(DatabaseConfiguration);
 
         await using OpsLedgerDbContext dbContext = new(optionsBuilder.Options);
         await dbContext.Database.MigrateAsync();
 
-        Factory = new PostgreSqlApiFactory(ConnectionString);
+        Factory = new PostgreSqlApiFactory(DatabaseConfiguration);
     }
 
     public async Task DisposeAsync()
