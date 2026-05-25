@@ -1,0 +1,70 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  validate:
+    name: Restore, build, and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore backend and test projects
+        run: |
+          dotnet restore src/OpsLedger.Api/OpsLedger.Api.csproj
+          dotnet restore src/OpsLedger.Presentation/OpsLedger.Presentation.csproj
+          dotnet restore tests/OpsLedger.UnitTests/OpsLedger.UnitTests.csproj
+          dotnet restore tests/OpsLedger.IntegrationTests/OpsLedger.IntegrationTests.csproj
+          dotnet restore tests/OpsLedger.BddTests/OpsLedger.BddTests.csproj
+
+      - name: Build backend and presentation projects
+        run: |
+          dotnet build src/OpsLedger.Api/OpsLedger.Api.csproj --configuration Release --no-restore
+          dotnet build src/OpsLedger.Presentation/OpsLedger.Presentation.csproj --configuration Release --no-restore
+
+      - name: Run unit tests
+        run: >
+          dotnet test tests/OpsLedger.UnitTests/OpsLedger.UnitTests.csproj
+          --configuration Release
+          --no-restore
+
+      - name: Run API integration tests
+        env:
+          ASPNETCORE_ENVIRONMENT: Testing
+          OPSLEDGER_STORAGE_PROVIDER: InMemory
+        run: >
+          dotnet test tests/OpsLedger.IntegrationTests/OpsLedger.IntegrationTests.csproj
+          --configuration Release
+          --no-restore
+
+      - name: Run API BDD scenarios
+        env:
+          ASPNETCORE_ENVIRONMENT: Testing
+          OPSLEDGER_STORAGE_PROVIDER: InMemory
+          OPSLEDGER_RUN_UI_BDD: "false"
+        run: >
+          dotnet test tests/OpsLedger.BddTests/OpsLedger.BddTests.csproj
+          --configuration Release
+          --no-restore
+          --filter "Category!=ui"
