@@ -8,6 +8,14 @@ trx_file_name="OpsLedger.BddTests.trx"
 
 mkdir -p "$results_directory"
 
+if [ -n "${OPSLEDGER_BDD_ARTIFACT_NAME:-}" ]; then
+    echo "BDD artifact: $OPSLEDGER_BDD_ARTIFACT_NAME"
+fi
+
+if [ -n "${OPSLEDGER_BDD_COMMIT_SHA:-}" ]; then
+    echo "BDD artifact commit: $OPSLEDGER_BDD_COMMIT_SHA"
+fi
+
 dotnet test "$project_path" \
     --configuration "$configuration" \
     --logger "trx;LogFileName=$trx_file_name" \
