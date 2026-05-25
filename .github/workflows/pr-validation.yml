@@ -197,48 +197,15 @@ jobs:
         env:
           AZDO_INCOMING_WEBHOOK_URL: ${{ secrets.AZDO_INCOMING_WEBHOOK_URL }}
           AZDO_INCOMING_WEBHOOK_SECRET: ${{ secrets.AZDO_INCOMING_WEBHOOK_SECRET }}
-          AZDO_WEBHOOK_SIGNATURE_HEADER: X-OpsLedger-Webhook-Signature
           OPSLEDGER_ARTIFACT_NAME: ${{ steps.artifact.outputs.name }}
-        run: |
-          if ([string]::IsNullOrWhiteSpace($env:AZDO_INCOMING_WEBHOOK_URL)) {
-              throw "AZDO_INCOMING_WEBHOOK_URL must be configured as a GitHub Actions secret."
-          }
-
-          if ([string]::IsNullOrWhiteSpace($env:AZDO_INCOMING_WEBHOOK_SECRET)) {
-              throw "AZDO_INCOMING_WEBHOOK_SECRET must be configured as a GitHub Actions secret."
-          }
-
-          $message = [ordered]@{
-              schemaVersion = 1
-              repository = "${{ github.repository }}"
-              branch = "${{ github.ref_name }}"
-              commitSha = "${{ github.sha }}"
-              githubRunId = "${{ github.run_id }}"
-              githubRunAttempt = "${{ github.run_attempt }}"
-              githubRunUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-              artifactName = $env:OPSLEDGER_ARTIFACT_NAME
-              artifactSource = "github-actions"
-          }
-
-          $payload = [ordered]@{
-              resource = [ordered]@{
-                  message = $message
-              }
-          }
-
-          $body = $payload | ConvertTo-Json -Depth 10 -Compress
-          $encoding = [System.Text.Encoding]::UTF8
-          $hmac = [System.Security.Cryptography.HMACSHA1]::new($encoding.GetBytes($env:AZDO_INCOMING_WEBHOOK_SECRET))
-          $signatureBytes = $hmac.ComputeHash($encoding.GetBytes($body))
-          $signature = [System.BitConverter]::ToString($signatureBytes).Replace("-", "").ToUpperInvariant()
-
-          $headers = @{
-              $env:AZDO_WEBHOOK_SIGNATURE_HEADER = $signature
-          }
-
-          Invoke-RestMethod `
-              -Method Post `
-              -Uri $env:AZDO_INCOMING_WEBHOOK_URL `
-              -Headers $headers `
-              -ContentType "application/json" `
-              -Body $body
+        run: >
+          ./scripts/Send-AzureDevOpsValidationTrigger.ps1
+          -WebhookUrl $env:AZDO_INCOMING_WEBHOOK_URL
+          -WebhookSecret $env:AZDO_INCOMING_WEBHOOK_SECRET
+          -Repository "${{ github.repository }}"
+          -Branch "${{ github.ref_name }}"
+          -CommitSha "${{ github.sha }}"
+          -GithubRunId "${{ github.run_id }}"
+          -GithubRunAttempt "${{ github.run_attempt }}"
+          -GithubRunUrl "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          -ArtifactName $env:OPSLEDGER_ARTIFACT_NAME
