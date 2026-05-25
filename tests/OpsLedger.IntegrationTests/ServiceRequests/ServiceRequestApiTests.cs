@@ -1,15 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
+using OpsLedger.Api.Modules.ServiceRequests.Dto;
 
 namespace OpsLedger.IntegrationTests.ServiceRequests;
 
-public sealed class ServiceRequestApiTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed class ServiceRequestApiTests : IClassFixture<InMemoryApiFactory>
 {
     private readonly HttpClient _client;
 
-    public ServiceRequestApiTests(WebApplicationFactory<Program> factory)
+    public ServiceRequestApiTests(InMemoryApiFactory factory)
     {
         _client = factory.CreateClient();
     }
@@ -249,38 +249,4 @@ public sealed class ServiceRequestApiTests : IClassFixture<WebApplicationFactory
         return body!;
     }
 
-    private sealed record AssignServiceRequestApiRequest(string AssigneeName);
-
-    private sealed record ResolveServiceRequestApiRequest(string ResolutionNotes);
-
-    private sealed record AddServiceRequestCommentApiRequest(string AuthorName, string Body);
-
-    private sealed record CreateServiceRequestApiRequest(
-        string Title,
-        string Category,
-        string Priority,
-        string Description,
-        string RequesterName,
-        string RequesterEmail,
-        string? ImpactDetails);
-
-    private sealed record ServiceRequestApiResponse(
-        string Id,
-        string Title,
-        string Category,
-        string Priority,
-        string Status,
-        DateTimeOffset CreatedAt,
-        DateTimeOffset SlaDueAt,
-        string? AssigneeName,
-        string? ResolutionNotes,
-        IReadOnlyList<ServiceRequestCommentApiResponse> Comments,
-        IReadOnlyList<string> Activity);
-
-    private sealed record ServiceRequestCommentApiResponse(
-        string AuthorName,
-        string Body,
-        DateTimeOffset CreatedAt);
-
-    private sealed record ValidationErrorResponse(IReadOnlyList<string> Errors);
 }

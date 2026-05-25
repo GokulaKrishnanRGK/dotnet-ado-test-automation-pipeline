@@ -1,5 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using OpsLedger.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
 
 namespace OpsLedger.IntegrationTests.PostgreSql;
@@ -15,12 +13,6 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await container.StartAsync();
-
-        DbContextOptionsBuilder<OpsLedgerDbContext> optionsBuilder = new();
-        optionsBuilder.UseNpgsql(DatabaseConfiguration);
-
-        await using OpsLedgerDbContext dbContext = new(optionsBuilder.Options);
-        await dbContext.Database.MigrateAsync();
 
         Factory = new PostgreSqlApiFactory(DatabaseConfiguration);
     }

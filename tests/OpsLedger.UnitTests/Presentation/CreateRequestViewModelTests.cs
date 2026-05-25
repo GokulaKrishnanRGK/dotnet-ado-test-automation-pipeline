@@ -50,6 +50,18 @@ public sealed class CreateRequestViewModelTests
         viewModel.ErrorMessage.Should().Be("Title is required. Description is required.");
     }
 
+    [Fact]
+    public async Task SubmitAsync_surfaces_api_connection_failure()
+    {
+        ThrowingServiceRequestClient client = new(new HttpRequestException("Connection refused."));
+        CreateRequestViewModel viewModel = new(client);
+
+        await viewModel.SubmitAsync();
+
+        viewModel.SuccessMessage.Should().BeNull();
+        viewModel.ErrorMessage.Should().Be("Unable to reach OpsLedger API. Confirm the API is running and the database connection is available.");
+    }
+
     private sealed class CapturingServiceRequestClient(ServiceRequestClientResult result)
         : IServiceRequestClient
     {
@@ -61,6 +73,52 @@ public sealed class CreateRequestViewModelTests
         {
             LastCreateRequest = request;
             return Task.FromResult(result);
+        }
+
+        public Task<IReadOnlyList<ServiceRequestSummary>> ListAsync(
+            ServiceRequestFilter filter,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<ServiceRequestSummary>>([]);
+        }
+
+        public Task<ServiceRequestSummary?> GetAsync(string id, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<ServiceRequestSummary?>(null);
+        }
+
+        public Task<ServiceRequestClientResult> AssignAsync(
+            string id,
+            AssignServiceRequestInput request,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(ServiceRequestClientResult.Invalid(["Not used."]));
+        }
+
+        public Task<ServiceRequestClientResult> ResolveAsync(
+            string id,
+            ResolveServiceRequestInput request,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(ServiceRequestClientResult.Invalid(["Not used."]));
+        }
+
+        public Task<ServiceRequestClientResult> AddCommentAsync(
+            string id,
+            AddServiceRequestCommentInput request,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(ServiceRequestClientResult.Invalid(["Not used."]));
+        }
+    }
+
+    private sealed class ThrowingServiceRequestClient(Exception exception) : IServiceRequestClient
+    {
+        public Task<ServiceRequestClientResult> CreateAsync(
+            CreateServiceRequestInput request,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromException<ServiceRequestClientResult>(exception);
         }
 
         public Task<IReadOnlyList<ServiceRequestSummary>> ListAsync(

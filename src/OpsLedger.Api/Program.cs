@@ -1,29 +1,18 @@
-using Microsoft.EntityFrameworkCore;
+using OpsLedger.Api.Configuration;
 using OpsLedger.Api.Modules.Health;
 using OpsLedger.Api.Modules.ServiceRequests;
-using OpsLedger.Api.Modules.ServiceRequests.Services;
-using OpsLedger.Infrastructure.Persistence;
-using OpsLedger.Infrastructure.Persistence.Repositories;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
-
-string? databaseConfiguration = Environment.GetEnvironmentVariable("OPSLEDGER_CONNECTION_STRING");
-
-if (string.IsNullOrWhiteSpace(databaseConfiguration))
-{
-    builder.Services.AddSingleton<IServiceRequestStore, InMemoryServiceRequestStore>();
-}
-else
-{
-    builder.Services.AddDbContext<OpsLedgerDbContext>(options =>
-        options.UseNpgsql(databaseConfiguration));
-    builder.Services.AddScoped<PostgreSqlServiceRequestRepository>();
-    builder.Services.AddScoped<IServiceRequestStore, PostgreSqlServiceRequestStore>();
-}
+builder.Services.AddOpsLedgerStorage(builder.Configuration, builder.Environment);
 
 WebApplication app = builder.Build();
+
+if (!OpsLedgerStorageConfiguration.UsesInMemoryStorage(app.Configuration, app.Environment))
+{
+    await app.Services.MigrateOpsLedgerDatabaseAsync();
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -33,6 +22,6 @@ if (app.Environment.IsDevelopment())
 app.MapHealthEndpoints();
 app.MapServiceRequestEndpoints();
 
-app.Run();
+await app.RunAsync();
 
 public partial class Program;
