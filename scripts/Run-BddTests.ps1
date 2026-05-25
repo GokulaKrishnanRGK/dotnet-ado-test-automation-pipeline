@@ -14,6 +14,14 @@ $trxFileName = "OpsLedger.BddTests.trx"
 
 New-Item -ItemType Directory -Path $ResultsDirectory -Force | Out-Null
 
+if ($env:OPSLEDGER_BDD_ARTIFACT_NAME) {
+    Write-Host "BDD artifact: $env:OPSLEDGER_BDD_ARTIFACT_NAME"
+}
+
+if ($env:OPSLEDGER_BDD_COMMIT_SHA) {
+    Write-Host "BDD artifact commit: $env:OPSLEDGER_BDD_COMMIT_SHA"
+}
+
 $testArguments = @(
     "test"
     $projectPath
