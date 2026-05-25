@@ -7,22 +7,27 @@
     Title="OpsLedger">
     <TabBar>
         <ShellContent
+            AutomationId="DashboardTab"
             Title="Dashboard"
             ContentTemplate="{DataTemplate pages:DashboardPage}"
             Route="dashboard" />
         <ShellContent
+            AutomationId="CreateRequestTab"
             Title="Create"
             ContentTemplate="{DataTemplate pages:CreateRequestPage}"
             Route="create-request" />
         <ShellContent
+            AutomationId="RequestQueueTab"
             Title="Queue"
             ContentTemplate="{DataTemplate pages:RequestQueuePage}"
             Route="request-queue" />
         <ShellContent
+            AutomationId="RequestDetailsTab"
             Title="Details"
             ContentTemplate="{DataTemplate pages:RequestDetailsPage}"
             Route="request-details" />
         <ShellContent
+            AutomationId="ReportsTab"
             Title="Reports"
             ContentTemplate="{DataTemplate pages:ReportsPage}"
             Route="reports" />
