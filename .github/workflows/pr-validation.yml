@@ -9,12 +9,14 @@ on:
       - main
 
 permissions:
+  checks: write
   contents: read
 
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  TEST_RESULTS_DIR: artifacts/test-results
 
 jobs:
   validate:
@@ -48,6 +50,8 @@ jobs:
           dotnet test tests/OpsLedger.UnitTests/OpsLedger.UnitTests.csproj
           --configuration Release
           --no-restore
+          --logger "trx;LogFileName=OpsLedger.UnitTests.trx"
+          --results-directory "${{ env.TEST_RESULTS_DIR }}/unit"
 
       - name: Run API integration tests
         env:
@@ -57,6 +61,8 @@ jobs:
           dotnet test tests/OpsLedger.IntegrationTests/OpsLedger.IntegrationTests.csproj
           --configuration Release
           --no-restore
+          --logger "trx;LogFileName=OpsLedger.IntegrationTests.trx"
+          --results-directory "${{ env.TEST_RESULTS_DIR }}/integration"
 
       - name: Run API BDD scenarios
         env:
@@ -67,4 +73,23 @@ jobs:
           dotnet test tests/OpsLedger.BddTests/OpsLedger.BddTests.csproj
           --configuration Release
           --no-restore
+          --logger "trx;LogFileName=OpsLedger.BddTests.trx"
+          --results-directory "${{ env.TEST_RESULTS_DIR }}/bdd"
           --filter "Category!=ui"
+
+      - name: Publish test report
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: .NET test results
+          path: ${{ env.TEST_RESULTS_DIR }}/**/*.trx
+          reporter: dotnet-trx
+          fail-on-error: true
+
+      - name: Upload test result artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsledger-test-results
+          path: ${{ env.TEST_RESULTS_DIR }}
+          if-no-files-found: error
