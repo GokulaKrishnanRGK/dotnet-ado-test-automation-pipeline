@@ -4,7 +4,7 @@ APP_FRAMEWORK := net10.0-maccatalyst
 ENV_FILE ?= .env.local
 DOTENV := ./scripts/Run-WithDotEnv.sh
 
-.PHONY: build build-app run run-app run-api
+.PHONY: build build-app run run-app run-api test-bdd
 
 build:
 	dotnet build $(APP_PROJECT) -f $(APP_FRAMEWORK)
@@ -18,3 +18,6 @@ run-app:
 
 run-api:
 	$(DOTENV) $(ENV_FILE) dotnet run --project $(API_PROJECT)
+
+test-bdd:
+	./scripts/Run-BddTests.sh
