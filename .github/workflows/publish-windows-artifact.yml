@@ -16,6 +16,8 @@ jobs:
   publish-windows-artifact:
     name: Publish win-x64 MAUI artifact
     runs-on: windows-latest
+    env:
+      ARTIFACT_RETENTION_DAYS: 14
 
     steps:
       - name: Checkout
@@ -53,9 +55,22 @@ jobs:
           ./scripts/Test-OpsLedgerArtifact.ps1
           -ArtifactPath (Get-ChildItem -Directory artifacts/opsledger-app-win-x64-* | Select-Object -First 1).FullName
 
+      - name: Resolve artifact path
+        id: artifact
+        shell: pwsh
+        run: |
+          $artifactDirectory = Get-ChildItem -Directory artifacts/opsledger-app-win-x64-* | Select-Object -First 1
+          if ($null -eq $artifactDirectory) {
+              throw "Windows artifact directory was not created."
+          }
+
+          "path=$($artifactDirectory.FullName)" >> $env:GITHUB_OUTPUT
+          "name=$($artifactDirectory.Name)" >> $env:GITHUB_OUTPUT
+
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: opsledger-app-win-x64-${{ github.sha }}
-          path: artifacts/opsledger-app-win-x64-*
+          name: ${{ steps.artifact.outputs.name }}
+          path: ${{ steps.artifact.outputs.path }}
           if-no-files-found: error
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
