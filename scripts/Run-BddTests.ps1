@@ -2,6 +2,8 @@
 param(
     [string]$Configuration = "Debug",
     [string]$ResultsDirectory = "artifacts/test-results/bdd",
+    [string]$Framework = "",
+    [string[]]$DotNetProperties = @(),
     [switch]$NoRestore,
     [switch]$NoBuild
 )
@@ -39,6 +41,15 @@ if ($NoRestore) {
 
 if ($NoBuild) {
     $testArguments += "--no-build"
+}
+
+if ($Framework) {
+    $testArguments += "--framework"
+    $testArguments += $Framework
+}
+
+foreach ($dotNetProperty in $DotNetProperties) {
+    $testArguments += "-p:$dotNetProperty"
 }
 
 & dotnet @testArguments

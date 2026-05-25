@@ -4,6 +4,7 @@ param(
     [string]$ArtifactPath,
     [string]$Configuration = "Debug",
     [string]$ResultsRoot = "artifacts/test-results/bdd",
+    [switch]$IncludeUi,
     [switch]$NoRestore,
     [switch]$NoBuild
 )
@@ -42,6 +43,7 @@ $env:OPSLEDGER_BDD_ARTIFACT_METADATA_PATH = (Resolve-Path -LiteralPath $metadata
 $env:OPSLEDGER_BDD_APP_EXECUTABLE_PATH = $executablePath
 $env:OPSLEDGER_BDD_ARTIFACT_NAME = $metadata.artifactName
 $env:OPSLEDGER_BDD_COMMIT_SHA = $metadata.commitSha
+$env:OPSLEDGER_RUN_UI_BDD = if ($IncludeUi) { "true" } else { "false" }
 
 Write-Host "Running BDD tests against artifact '$($metadata.artifactName)'"
 Write-Host "Executable: $executablePath"
@@ -60,6 +62,17 @@ if ($NoRestore) {
 
 if ($NoBuild) {
     $runBddArguments += "-NoBuild"
+}
+
+if ($IncludeUi) {
+    if (-not $IsWindows) {
+        throw "Interactive Windows UI BDD can only run on a Windows agent."
+    }
+
+    $runBddArguments += "-Framework"
+    $runBddArguments += "net10.0-windows10.0.19041.0"
+    $runBddArguments += "-DotNetProperties"
+    $runBddArguments += "EnableWindowsUiAutomation=true"
 }
 
 & (Join-Path $PSScriptRoot "Run-BddTests.ps1") @runBddArguments
