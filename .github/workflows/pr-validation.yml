@@ -17,6 +17,8 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   TEST_RESULTS_DIR: artifacts/test-results
+  COVERAGE_REPORT_DIR: artifacts/coverage-report
+  REPORTGENERATOR_DIR: artifacts/tools/reportgenerator
 
 jobs:
   validate:
@@ -52,6 +54,11 @@ jobs:
           --no-restore
           --logger "trx;LogFileName=OpsLedger.UnitTests.trx"
           --results-directory "${{ env.TEST_RESULTS_DIR }}/unit"
+          --collect:"XPlat Code Coverage"
+          --
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile="**/Migrations/*.cs,**/*.Designer.cs,**/Platforms/**/*.cs,**/obj/**/*.cs"
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Exclude="[*.Tests]*"
 
       - name: Run API integration tests
         env:
@@ -63,6 +70,11 @@ jobs:
           --no-restore
           --logger "trx;LogFileName=OpsLedger.IntegrationTests.trx"
           --results-directory "${{ env.TEST_RESULTS_DIR }}/integration"
+          --collect:"XPlat Code Coverage"
+          --
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile="**/Migrations/*.cs,**/*.Designer.cs,**/Platforms/**/*.cs,**/obj/**/*.cs"
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Exclude="[*.Tests]*"
 
       - name: Run API BDD scenarios
         env:
@@ -86,10 +98,37 @@ jobs:
           reporter: dotnet-trx
           fail-on-error: true
 
+      - name: Install ReportGenerator
+        if: always()
+        run: dotnet tool install dotnet-reportgenerator-globaltool --tool-path "${{ env.REPORTGENERATOR_DIR }}"
+
+      - name: Generate coverage report
+        if: always()
+        run: >
+          "${{ env.REPORTGENERATOR_DIR }}/reportgenerator"
+          -reports:"${{ env.TEST_RESULTS_DIR }}/**/coverage.cobertura.xml"
+          -targetdir:"${{ env.COVERAGE_REPORT_DIR }}"
+          -reporttypes:"HtmlInline_AzurePipelines;Cobertura;MarkdownSummaryGithub"
+          -assemblyfilters:"+OpsLedger.*;-*.Tests"
+          -classfilters:"-*.Migrations.*"
+          -filefilters:"-**/Migrations/*.cs;-**/*.Designer.cs;-**/Platforms/**/*.cs;-**/obj/**/*.cs"
+
+      - name: Append coverage summary
+        if: always()
+        run: cat "${{ env.COVERAGE_REPORT_DIR }}/SummaryGithub.md" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload test result artifacts
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: opsledger-test-results
           path: ${{ env.TEST_RESULTS_DIR }}
+          if-no-files-found: error
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: opsledger-coverage-report
+          path: ${{ env.COVERAGE_REPORT_DIR }}
           if-no-files-found: error
