@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using FluentAssertions.Specialized;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using OpsLedger.Api.Modules.ServiceRequests.Dto;
 using OpsLedger.Infrastructure.Persistence;
 
 namespace OpsLedger.IntegrationTests.PostgreSql;
@@ -54,7 +57,9 @@ public sealed class PostgreSqlServiceRequestApiTests : IClassFixture<PostgreSqlF
                  {DateTimeOffset.UtcNow})
              """);
 
-        await act.Should().ThrowAsync<DbUpdateException>();
+        ExceptionAssertions<PostgresException> exception = await act.Should().ThrowAsync<PostgresException>();
+        exception.Which.SqlState.Should().Be(PostgresErrorCodes.RaiseException);
+        exception.Which.MessageText.Should().Be("Service request missing-request was not found.");
 
         Int32 activityCountAfter = await dbContext.RequestActivity.CountAsync();
         activityCountAfter.Should().Be(activityCountBefore);
@@ -82,30 +87,4 @@ public sealed class PostgreSqlServiceRequestApiTests : IClassFixture<PostgreSqlF
             ImpactDetails: priority == "Critical" ? "Critical business impact." : null);
     }
 
-    private sealed record CreateServiceRequestApiRequest(
-        string Title,
-        string Category,
-        string Priority,
-        string Description,
-        string RequesterName,
-        string RequesterEmail,
-        string? ImpactDetails);
-
-    private sealed record ServiceRequestApiResponse(
-        string Id,
-        string Title,
-        string Category,
-        string Priority,
-        string Status,
-        DateTimeOffset CreatedAt,
-        DateTimeOffset SlaDueAt,
-        string? AssigneeName,
-        string? ResolutionNotes,
-        IReadOnlyList<ServiceRequestCommentApiResponse> Comments,
-        IReadOnlyList<string> Activity);
-
-    private sealed record ServiceRequestCommentApiResponse(
-        string AuthorName,
-        string Body,
-        DateTimeOffset CreatedAt);
 }

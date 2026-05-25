@@ -89,16 +89,26 @@ public sealed class CreateRequestViewModel : ObservableObject
         SuccessMessage = null;
         ErrorMessage = null;
 
-        ServiceRequestClientResult result = await client.CreateAsync(
-            new CreateServiceRequestInput(
-                Title ?? string.Empty,
-                Category ?? string.Empty,
-                Priority ?? string.Empty,
-                Description ?? string.Empty,
-                RequesterName ?? string.Empty,
-                RequesterEmail ?? string.Empty,
-                ImpactDetails),
-            cancellationToken);
+        ServiceRequestClientResult result;
+
+        try
+        {
+            result = await client.CreateAsync(
+                new CreateServiceRequestInput(
+                    Title ?? string.Empty,
+                    Category ?? string.Empty,
+                    Priority ?? string.Empty,
+                    Description ?? string.Empty,
+                    RequesterName ?? string.Empty,
+                    RequesterEmail ?? string.Empty,
+                    ImpactDetails),
+                cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            ErrorMessage = "Unable to reach OpsLedger API. Confirm the API is running and the database connection is available.";
+            return;
+        }
 
         if (result.IsSuccess)
         {
