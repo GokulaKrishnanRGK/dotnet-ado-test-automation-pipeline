@@ -159,13 +159,6 @@ jobs:
         shell: pwsh
         run: dotnet workload restore src/OpsLedger.App/OpsLedger.App.csproj
 
-      - name: Restore app project
-        shell: pwsh
-        run: >
-          dotnet restore src/OpsLedger.App/OpsLedger.App.csproj
-          -p:TargetFramework=net10.0-windows10.0.19041.0
-          -p:RuntimeIdentifier=win-x64
-
       - name: Publish Windows artifact
         shell: pwsh
         run: >
@@ -173,7 +166,6 @@ jobs:
           -Target win-x64
           -Configuration Release
           -CommitSha "${{ github.sha }}"
-          -NoRestore
 
       - name: Resolve artifact path
         id: artifact
