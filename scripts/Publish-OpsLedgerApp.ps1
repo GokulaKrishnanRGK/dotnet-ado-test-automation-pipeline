@@ -83,6 +83,7 @@ function Get-PublishSettings {
         Framework = "net10.0-windows10.0.19041.0"
         Runtime = "win-x64"
         ExtraProperties = @(
+            "-p:RuntimeIdentifierOverride=win-x64"
             "-p:WindowsPackageType=None"
         )
     }
@@ -110,8 +111,6 @@ $publishArguments = @(
     $Configuration
     "--framework"
     $settings.Framework
-    "--runtime"
-    $settings.Runtime
     "--output"
     $artifactDirectory
     "-p:SourceRevisionId=$resolvedCommitSha"
