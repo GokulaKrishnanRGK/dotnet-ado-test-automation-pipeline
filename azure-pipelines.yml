@@ -1,0 +1,197 @@
+name: opsledger-validation-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+pr: none
+
+resources:
+  webhooks:
+    - webhook: WebHook
+      connection: OpsLedger-GitHub-IncomingWebhook
+
+variables:
+  - group: OpsLedger.Validation
+  - name: OPSLEDGER_API_BASE_ADDRESS
+    value: http://localhost:5184
+  - name: OPSLEDGER_ARTIFACT_DOWNLOAD_ROOT
+    value: $(Pipeline.Workspace)\opsledger-artifacts
+  - name: OPSLEDGER_TEST_RESULTS_ROOT
+    value: $(Agent.TempDirectory)\opsledger-test-results
+  - name: USE_LOCAL_POSTGRESQL
+    value: true
+
+stages:
+  - stage: ReceiveGitHubArtifactMetadata
+    displayName: Receive GitHub artifact metadata
+    jobs:
+      - job: PrintReceivedMetadata
+        displayName: Print received GitHub metadata
+        pool:
+          vmImage: windows-latest
+        steps:
+          - checkout: self
+
+          - pwsh: |
+              Set-StrictMode -Version Latest
+              $ErrorActionPreference = "Stop"
+
+              [string]$buildReason = $env:BUILD_REASON
+              [System.Collections.Specialized.OrderedDictionary]$receivedMetadata = [ordered]@{
+                  SchemaVersion = $env:OPSLEDGER_WEBHOOK_SCHEMA_VERSION
+                  Repository = $env:OPSLEDGER_WEBHOOK_REPOSITORY
+                  Branch = $env:OPSLEDGER_WEBHOOK_BRANCH
+                  CommitSha = $env:OPSLEDGER_WEBHOOK_COMMIT_SHA
+                  GithubRunId = $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_ID
+                  GithubRunAttempt = $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_ATTEMPT
+                  GithubRunUrl = $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_URL
+                  ArtifactName = $env:OPSLEDGER_WEBHOOK_ARTIFACT_NAME
+                  ArtifactSource = $env:OPSLEDGER_WEBHOOK_ARTIFACT_SOURCE
+              }
+
+              Write-Host "Build reason: $buildReason"
+
+              if ($buildReason -ne "ResourceTrigger") {
+                  Write-Host "No webhook payload is expected for this run. This run can register or validate the webhook-enabled pipeline definition."
+                  return
+              }
+
+              [string[]]$missingFields = $receivedMetadata.GetEnumerator() |
+                  Where-Object { [string]::IsNullOrWhiteSpace([string]$_.Value) } |
+                  ForEach-Object { [string]$_.Key }
+
+              if ($missingFields.Count -gt 0) {
+                  throw "Webhook payload is missing required field(s): $($missingFields -join ', ')."
+              }
+
+              Write-Host "Repository: $($receivedMetadata["Repository"])"
+              Write-Host "Branch: $($receivedMetadata["Branch"])"
+              Write-Host "Commit SHA: $($receivedMetadata["CommitSha"])"
+              Write-Host "GitHub run id: $($receivedMetadata["GithubRunId"])"
+              Write-Host "GitHub run attempt: $($receivedMetadata["GithubRunAttempt"])"
+              Write-Host "GitHub run URL: $($receivedMetadata["GithubRunUrl"])"
+              Write-Host "Artifact name: $($receivedMetadata["ArtifactName"])"
+              Write-Host "Artifact source: $($receivedMetadata["ArtifactSource"])"
+            displayName: Validate received GitHub metadata
+            env:
+              BUILD_REASON: $(Build.Reason)
+              OPSLEDGER_WEBHOOK_SCHEMA_VERSION: ${{ parameters.WebHook.resource.message.schemaVersion }}
+              OPSLEDGER_WEBHOOK_REPOSITORY: ${{ parameters.WebHook.resource.message.repository }}
+              OPSLEDGER_WEBHOOK_BRANCH: ${{ parameters.WebHook.resource.message.branch }}
+              OPSLEDGER_WEBHOOK_COMMIT_SHA: ${{ parameters.WebHook.resource.message.commitSha }}
+              OPSLEDGER_WEBHOOK_GITHUB_RUN_ID: ${{ parameters.WebHook.resource.message.githubRunId }}
+              OPSLEDGER_WEBHOOK_GITHUB_RUN_ATTEMPT: ${{ parameters.WebHook.resource.message.githubRunAttempt }}
+              OPSLEDGER_WEBHOOK_GITHUB_RUN_URL: ${{ parameters.WebHook.resource.message.githubRunUrl }}
+              OPSLEDGER_WEBHOOK_ARTIFACT_NAME: ${{ parameters.WebHook.resource.message.artifactName }}
+              OPSLEDGER_WEBHOOK_ARTIFACT_SOURCE: ${{ parameters.WebHook.resource.message.artifactSource }}
+
+  - stage: ValidateArtifact
+    displayName: Validate published artifact
+    dependsOn: ReceiveGitHubArtifactMetadata
+    condition: eq(variables['Build.Reason'], 'ResourceTrigger')
+    variables:
+      GITHUB_REPOSITORY: ${{ parameters.WebHook.resource.message.repository }}
+      GITHUB_BRANCH: ${{ parameters.WebHook.resource.message.branch }}
+      GITHUB_COMMIT_SHA: ${{ parameters.WebHook.resource.message.commitSha }}
+      GITHUB_RUN_ID: ${{ parameters.WebHook.resource.message.githubRunId }}
+      GITHUB_RUN_ATTEMPT: ${{ parameters.WebHook.resource.message.githubRunAttempt }}
+      GITHUB_RUN_URL: ${{ parameters.WebHook.resource.message.githubRunUrl }}
+      GITHUB_ARTIFACT_NAME: ${{ parameters.WebHook.resource.message.artifactName }}
+      GITHUB_ARTIFACT_SOURCE: ${{ parameters.WebHook.resource.message.artifactSource }}
+    jobs:
+      - job: RunBddValidation
+        displayName: Run BDD validation
+        pool:
+          vmImage: windows-latest
+        steps:
+          - checkout: self
+
+          - task: UseDotNet@2
+            displayName: Install .NET SDK
+            inputs:
+              packageType: sdk
+              version: 10.0.x
+
+          - pwsh: dotnet --info
+            displayName: Print .NET information
+
+          - pwsh: |
+              New-Item -ItemType Directory -Path "$(OPSLEDGER_ARTIFACT_DOWNLOAD_ROOT)" -Force | Out-Null
+              New-Item -ItemType Directory -Path "$(OPSLEDGER_TEST_RESULTS_ROOT)" -Force | Out-Null
+              New-Item -ItemType Directory -Path "$(Pipeline.Workspace)\opsledger-logs" -Force | Out-Null
+            displayName: Prepare workspace directories
+
+          - pwsh: |
+              ./scripts/Get-GitHubActionsArtifact.ps1 `
+                -Repository "$(GITHUB_REPOSITORY)" `
+                -RunId "$(GITHUB_RUN_ID)" `
+                -ArtifactName "$(GITHUB_ARTIFACT_NAME)" `
+                -Token "$(GITHUB_ARTIFACT_TOKEN)" `
+                -OutputRoot "$(OPSLEDGER_ARTIFACT_DOWNLOAD_ROOT)" `
+                -SetAzurePipelineVariables
+            displayName: Download GitHub Actions artifact
+
+          - pwsh: |
+              ./scripts/install-postgresql.ps1 `
+                -SetAzurePipelineVariables
+            displayName: Install and prepare PostgreSQL
+            condition: and(succeeded(), eq(variables['USE_LOCAL_POSTGRESQL'], 'true'))
+            env:
+              OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD: $(OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD)
+              OPSLEDGER_POSTGRES_APP_PASSWORD: $(OPSLEDGER_POSTGRES_APP_PASSWORD)
+
+          - pwsh: |
+              ./scripts/setup-test-env.ps1 `
+                -ApiBaseAddress "$(OPSLEDGER_API_BASE_ADDRESS)" `
+                -StorageProvider "PostgreSql" `
+                -LogDirectory "$(Pipeline.Workspace)\opsledger-logs" `
+                -MetadataPath "$(Pipeline.Workspace)\opsledger-test-env.json"
+            displayName: Prepare validation environment
+            env:
+              OPSLEDGER_CONNECTION_STRING: $(OPSLEDGER_CONNECTION_STRING)
+
+          - pwsh: |
+              ./scripts/run-bdd.ps1 `
+                -ArtifactPath "$(OPSLEDGER_DOWNLOADED_ARTIFACT_PATH)" `
+                -Configuration Release `
+                -ResultsRoot "$(OPSLEDGER_TEST_RESULTS_ROOT)\bdd-api" `
+                -TestFilter "Category!=ui"
+            displayName: Run API and workflow BDD scenarios
+            env:
+              OPSLEDGER_API_BASE_ADDRESS: $(OPSLEDGER_API_BASE_ADDRESS)
+
+          - pwsh: |
+              ./scripts/run-bdd.ps1 `
+                -ArtifactPath "$(OPSLEDGER_DOWNLOADED_ARTIFACT_PATH)" `
+                -Configuration Release `
+                -ResultsRoot "$(OPSLEDGER_TEST_RESULTS_ROOT)\bdd-ui" `
+                -TestFilter "Category=ui" `
+                -IncludeUi
+            displayName: Run interactive UI BDD scenarios
+            condition: and(succeeded(), eq(variables['RUN_INTERACTIVE_UI_BDD'], 'true'))
+            env:
+              OPSLEDGER_API_BASE_ADDRESS: $(OPSLEDGER_API_BASE_ADDRESS)
+
+          - task: PublishTestResults@2
+            displayName: Publish BDD test results
+            condition: always()
+            inputs:
+              testResultsFormat: VSTest
+              testResultsFiles: opsledger-test-results\**\*.trx
+              searchFolder: $(Agent.TempDirectory)
+              failTaskOnFailedTests: true
+              testRunTitle: OpsLedger BDD validation
+
+          - publish: $(OPSLEDGER_TEST_RESULTS_ROOT)
+            displayName: Publish BDD result artifacts
+            condition: always()
+            artifact: opsledger-bdd-results
+
+          - publish: $(Pipeline.Workspace)\opsledger-logs
+            displayName: Publish validation logs
+            condition: always()
+            artifact: opsledger-validation-logs
+
+          - pwsh: ./scripts/stop-test-env.ps1
+            displayName: Stop validation environment
+            condition: always()
+            env:
+              OPSLEDGER_API_PROCESS_ID: $(OPSLEDGER_API_PROCESS_ID)

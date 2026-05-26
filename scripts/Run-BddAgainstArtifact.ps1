@@ -4,6 +4,7 @@ param(
     [string]$ArtifactPath,
     [string]$Configuration = "Debug",
     [string]$ResultsRoot = "artifacts/test-results/bdd",
+    [string]$TestFilter = "",
     [switch]$IncludeUi,
     [switch]$NoRestore,
     [switch]$NoBuild
@@ -62,6 +63,11 @@ if ($NoRestore) {
 
 if ($NoBuild) {
     $runBddArguments += "-NoBuild"
+}
+
+if ($TestFilter) {
+    $runBddArguments += "-TestFilter"
+    $runBddArguments += $TestFilter
 }
 
 if ($IncludeUi) {
