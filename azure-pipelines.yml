@@ -3,6 +3,40 @@ name: opsledger-validation-$(Date:yyyyMMdd)$(Rev:.r)
 trigger: none
 pr: none
 
+parameters:
+  - name: manualRepository
+    displayName: Existing artifact GitHub repository
+    type: string
+    default: ""
+  - name: manualBranch
+    displayName: Existing artifact branch
+    type: string
+    default: ""
+  - name: manualCommitSha
+    displayName: Existing artifact commit SHA
+    type: string
+    default: ""
+  - name: manualGithubRunId
+    displayName: Existing artifact GitHub run id
+    type: string
+    default: ""
+  - name: manualGithubRunAttempt
+    displayName: Existing artifact GitHub run attempt
+    type: string
+    default: "1"
+  - name: manualGithubRunUrl
+    displayName: Existing artifact GitHub run URL
+    type: string
+    default: ""
+  - name: manualArtifactName
+    displayName: Existing artifact name
+    type: string
+    default: ""
+  - name: manualArtifactSource
+    displayName: Existing artifact source
+    type: string
+    default: "github-actions"
+
 resources:
   webhooks:
     - webhook: WebHook
@@ -36,27 +70,27 @@ stages:
 
               [string]$buildReason = $env:BUILD_REASON
               [System.Collections.Specialized.OrderedDictionary]$receivedMetadata = [ordered]@{
-                  SchemaVersion = $env:OPSLEDGER_WEBHOOK_SCHEMA_VERSION
-                  Repository = $env:OPSLEDGER_WEBHOOK_REPOSITORY
-                  Branch = $env:OPSLEDGER_WEBHOOK_BRANCH
-                  CommitSha = $env:OPSLEDGER_WEBHOOK_COMMIT_SHA
-                  GithubRunId = $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_ID
-                  GithubRunAttempt = $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_ATTEMPT
-                  GithubRunUrl = $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_URL
-                  ArtifactName = $env:OPSLEDGER_WEBHOOK_ARTIFACT_NAME
-                  ArtifactSource = $env:OPSLEDGER_WEBHOOK_ARTIFACT_SOURCE
+                  SchemaVersion = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_SCHEMA_VERSION } else { "1" }
+                  Repository = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_REPOSITORY } else { $env:OPSLEDGER_MANUAL_REPOSITORY }
+                  Branch = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_BRANCH } else { $env:OPSLEDGER_MANUAL_BRANCH }
+                  CommitSha = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_COMMIT_SHA } else { $env:OPSLEDGER_MANUAL_COMMIT_SHA }
+                  GithubRunId = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_ID } else { $env:OPSLEDGER_MANUAL_GITHUB_RUN_ID }
+                  GithubRunAttempt = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_ATTEMPT } else { $env:OPSLEDGER_MANUAL_GITHUB_RUN_ATTEMPT }
+                  GithubRunUrl = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_URL } else { $env:OPSLEDGER_MANUAL_GITHUB_RUN_URL }
+                  ArtifactName = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_ARTIFACT_NAME } else { $env:OPSLEDGER_MANUAL_ARTIFACT_NAME }
+                  ArtifactSource = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_ARTIFACT_SOURCE } else { $env:OPSLEDGER_MANUAL_ARTIFACT_SOURCE }
               }
 
               Write-Host "Build reason: $buildReason"
 
-              if ($buildReason -ne "ResourceTrigger") {
-                  Write-Host "No webhook payload is expected for this run. This run can register or validate the webhook-enabled pipeline definition."
+              if ($buildReason -ne "ResourceTrigger" -and [string]::IsNullOrWhiteSpace([string]$receivedMetadata["ArtifactName"])) {
+                  Write-Host "No existing artifact metadata was provided. This run can register or validate the webhook-enabled pipeline definition."
                   return
               }
 
-              [string[]]$missingFields = $receivedMetadata.GetEnumerator() |
+              [string[]]$missingFields = @($receivedMetadata.GetEnumerator() |
                   Where-Object { [string]::IsNullOrWhiteSpace([string]$_.Value) } |
-                  ForEach-Object { [string]$_.Key }
+                  ForEach-Object { [string]$_.Key })
 
               if ($missingFields.Count -gt 0) {
                   throw "Webhook payload is missing required field(s): $($missingFields -join ', ')."
@@ -82,20 +116,19 @@ stages:
               OPSLEDGER_WEBHOOK_GITHUB_RUN_URL: ${{ parameters.WebHook.resource.message.githubRunUrl }}
               OPSLEDGER_WEBHOOK_ARTIFACT_NAME: ${{ parameters.WebHook.resource.message.artifactName }}
               OPSLEDGER_WEBHOOK_ARTIFACT_SOURCE: ${{ parameters.WebHook.resource.message.artifactSource }}
+              OPSLEDGER_MANUAL_REPOSITORY: ${{ parameters.manualRepository }}
+              OPSLEDGER_MANUAL_BRANCH: ${{ parameters.manualBranch }}
+              OPSLEDGER_MANUAL_COMMIT_SHA: ${{ parameters.manualCommitSha }}
+              OPSLEDGER_MANUAL_GITHUB_RUN_ID: ${{ parameters.manualGithubRunId }}
+              OPSLEDGER_MANUAL_GITHUB_RUN_ATTEMPT: ${{ parameters.manualGithubRunAttempt }}
+              OPSLEDGER_MANUAL_GITHUB_RUN_URL: ${{ parameters.manualGithubRunUrl }}
+              OPSLEDGER_MANUAL_ARTIFACT_NAME: ${{ parameters.manualArtifactName }}
+              OPSLEDGER_MANUAL_ARTIFACT_SOURCE: ${{ parameters.manualArtifactSource }}
 
   - stage: ValidateArtifact
     displayName: Validate published artifact
     dependsOn: ReceiveGitHubArtifactMetadata
-    condition: eq(variables['Build.Reason'], 'ResourceTrigger')
-    variables:
-      GITHUB_REPOSITORY: ${{ parameters.WebHook.resource.message.repository }}
-      GITHUB_BRANCH: ${{ parameters.WebHook.resource.message.branch }}
-      GITHUB_COMMIT_SHA: ${{ parameters.WebHook.resource.message.commitSha }}
-      GITHUB_RUN_ID: ${{ parameters.WebHook.resource.message.githubRunId }}
-      GITHUB_RUN_ATTEMPT: ${{ parameters.WebHook.resource.message.githubRunAttempt }}
-      GITHUB_RUN_URL: ${{ parameters.WebHook.resource.message.githubRunUrl }}
-      GITHUB_ARTIFACT_NAME: ${{ parameters.WebHook.resource.message.artifactName }}
-      GITHUB_ARTIFACT_SOURCE: ${{ parameters.WebHook.resource.message.artifactSource }}
+    condition: or(eq(variables['Build.Reason'], 'ResourceTrigger'), ne('${{ parameters.manualArtifactName }}', ''))
     jobs:
       - job: RunBddValidation
         displayName: Run BDD validation
@@ -112,6 +145,60 @@ stages:
 
           - pwsh: dotnet --info
             displayName: Print .NET information
+
+          - pwsh: |
+              Set-StrictMode -Version Latest
+              $ErrorActionPreference = "Stop"
+
+              [string]$buildReason = $env:BUILD_REASON
+              [System.Collections.Specialized.OrderedDictionary]$metadata = [ordered]@{
+                  Repository = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_REPOSITORY } else { $env:OPSLEDGER_MANUAL_REPOSITORY }
+                  Branch = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_BRANCH } else { $env:OPSLEDGER_MANUAL_BRANCH }
+                  CommitSha = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_COMMIT_SHA } else { $env:OPSLEDGER_MANUAL_COMMIT_SHA }
+                  GithubRunId = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_ID } else { $env:OPSLEDGER_MANUAL_GITHUB_RUN_ID }
+                  GithubRunAttempt = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_ATTEMPT } else { $env:OPSLEDGER_MANUAL_GITHUB_RUN_ATTEMPT }
+                  GithubRunUrl = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_URL } else { $env:OPSLEDGER_MANUAL_GITHUB_RUN_URL }
+                  ArtifactName = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_ARTIFACT_NAME } else { $env:OPSLEDGER_MANUAL_ARTIFACT_NAME }
+                  ArtifactSource = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_ARTIFACT_SOURCE } else { $env:OPSLEDGER_MANUAL_ARTIFACT_SOURCE }
+              }
+
+              [string[]]$missingFields = @($metadata.GetEnumerator() |
+                  Where-Object { [string]::IsNullOrWhiteSpace([string]$_.Value) } |
+                  ForEach-Object { [string]$_.Key })
+
+              if ($missingFields.Count -gt 0) {
+                  throw "Artifact metadata is missing required field(s): $($missingFields -join ', ')."
+              }
+
+              Write-Host "##vso[task.setvariable variable=GITHUB_REPOSITORY]$($metadata["Repository"])"
+              Write-Host "##vso[task.setvariable variable=GITHUB_BRANCH]$($metadata["Branch"])"
+              Write-Host "##vso[task.setvariable variable=GITHUB_COMMIT_SHA]$($metadata["CommitSha"])"
+              Write-Host "##vso[task.setvariable variable=GITHUB_RUN_ID]$($metadata["GithubRunId"])"
+              Write-Host "##vso[task.setvariable variable=GITHUB_RUN_ATTEMPT]$($metadata["GithubRunAttempt"])"
+              Write-Host "##vso[task.setvariable variable=GITHUB_RUN_URL]$($metadata["GithubRunUrl"])"
+              Write-Host "##vso[task.setvariable variable=GITHUB_ARTIFACT_NAME]$($metadata["ArtifactName"])"
+              Write-Host "##vso[task.setvariable variable=GITHUB_ARTIFACT_SOURCE]$($metadata["ArtifactSource"])"
+
+              Write-Host "Using artifact '$($metadata["ArtifactName"])' from GitHub run '$($metadata["GithubRunId"])'."
+            displayName: Resolve artifact metadata
+            env:
+              BUILD_REASON: $(Build.Reason)
+              OPSLEDGER_WEBHOOK_REPOSITORY: ${{ parameters.WebHook.resource.message.repository }}
+              OPSLEDGER_WEBHOOK_BRANCH: ${{ parameters.WebHook.resource.message.branch }}
+              OPSLEDGER_WEBHOOK_COMMIT_SHA: ${{ parameters.WebHook.resource.message.commitSha }}
+              OPSLEDGER_WEBHOOK_GITHUB_RUN_ID: ${{ parameters.WebHook.resource.message.githubRunId }}
+              OPSLEDGER_WEBHOOK_GITHUB_RUN_ATTEMPT: ${{ parameters.WebHook.resource.message.githubRunAttempt }}
+              OPSLEDGER_WEBHOOK_GITHUB_RUN_URL: ${{ parameters.WebHook.resource.message.githubRunUrl }}
+              OPSLEDGER_WEBHOOK_ARTIFACT_NAME: ${{ parameters.WebHook.resource.message.artifactName }}
+              OPSLEDGER_WEBHOOK_ARTIFACT_SOURCE: ${{ parameters.WebHook.resource.message.artifactSource }}
+              OPSLEDGER_MANUAL_REPOSITORY: ${{ parameters.manualRepository }}
+              OPSLEDGER_MANUAL_BRANCH: ${{ parameters.manualBranch }}
+              OPSLEDGER_MANUAL_COMMIT_SHA: ${{ parameters.manualCommitSha }}
+              OPSLEDGER_MANUAL_GITHUB_RUN_ID: ${{ parameters.manualGithubRunId }}
+              OPSLEDGER_MANUAL_GITHUB_RUN_ATTEMPT: ${{ parameters.manualGithubRunAttempt }}
+              OPSLEDGER_MANUAL_GITHUB_RUN_URL: ${{ parameters.manualGithubRunUrl }}
+              OPSLEDGER_MANUAL_ARTIFACT_NAME: ${{ parameters.manualArtifactName }}
+              OPSLEDGER_MANUAL_ARTIFACT_SOURCE: ${{ parameters.manualArtifactSource }}
 
           - pwsh: |
               New-Item -ItemType Directory -Path "$(OPSLEDGER_ARTIFACT_DOWNLOAD_ROOT)" -Force | Out-Null
