@@ -3,6 +3,7 @@ param(
     [string]$Configuration = "Debug",
     [string]$ResultsDirectory = "artifacts/test-results/bdd",
     [string]$Framework = "",
+    [string]$TestFilter = "",
     [string[]]$DotNetProperties = @(),
     [switch]$NoRestore,
     [switch]$NoBuild
@@ -46,6 +47,11 @@ if ($NoBuild) {
 if ($Framework) {
     $testArguments += "--framework"
     $testArguments += $Framework
+}
+
+if ($TestFilter) {
+    $testArguments += "--filter"
+    $testArguments += $TestFilter
 }
 
 foreach ($dotNetProperty in $DotNetProperties) {
