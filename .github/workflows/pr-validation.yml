@@ -161,7 +161,10 @@ jobs:
 
       - name: Restore app project
         shell: pwsh
-        run: dotnet restore src/OpsLedger.App/OpsLedger.App.csproj
+        run: >
+          dotnet restore src/OpsLedger.App/OpsLedger.App.csproj
+          --framework net10.0-windows10.0.19041.0
+          --runtime win-x64
 
       - name: Publish Windows artifact
         shell: pwsh
