@@ -7,11 +7,11 @@ parameters:
   - name: manualRepository
     displayName: Existing artifact GitHub repository
     type: string
-    default: ""
+    default: GokulaKrishnanRGK/dotnet-ado-test-automation-pipeline
   - name: manualBranch
     displayName: Existing artifact branch
     type: string
-    default: ""
+    default: main
   - name: manualCommitSha
     displayName: Existing artifact commit SHA
     type: string
@@ -24,14 +24,6 @@ parameters:
     displayName: Existing artifact GitHub run attempt
     type: string
     default: "1"
-  - name: manualGithubRunUrl
-    displayName: Existing artifact GitHub run URL
-    type: string
-    default: ""
-  - name: manualArtifactName
-    displayName: Existing artifact name
-    type: string
-    default: ""
   - name: manualArtifactSource
     displayName: Existing artifact source
     type: string
@@ -69,6 +61,23 @@ stages:
               $ErrorActionPreference = "Stop"
 
               [string]$buildReason = $env:BUILD_REASON
+              function Get-ManualArtifactName {
+                  if ([string]::IsNullOrWhiteSpace($env:OPSLEDGER_MANUAL_COMMIT_SHA)) {
+                      return ""
+                  }
+
+                  [int]$shortShaLength = [System.Math]::Min(12, $env:OPSLEDGER_MANUAL_COMMIT_SHA.Length)
+                  return "opsledger-app-win-x64-$($env:OPSLEDGER_MANUAL_COMMIT_SHA.Substring(0, $shortShaLength))"
+              }
+
+              function Get-ManualGithubRunUrl {
+                  if ([string]::IsNullOrWhiteSpace($env:OPSLEDGER_MANUAL_REPOSITORY) -or [string]::IsNullOrWhiteSpace($env:OPSLEDGER_MANUAL_GITHUB_RUN_ID)) {
+                      return ""
+                  }
+
+                  return "https://github.com/$($env:OPSLEDGER_MANUAL_REPOSITORY)/actions/runs/$($env:OPSLEDGER_MANUAL_GITHUB_RUN_ID)"
+              }
+
               [System.Collections.Specialized.OrderedDictionary]$receivedMetadata = [ordered]@{
                   SchemaVersion = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_SCHEMA_VERSION } else { "1" }
                   Repository = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_REPOSITORY } else { $env:OPSLEDGER_MANUAL_REPOSITORY }
@@ -76,14 +85,14 @@ stages:
                   CommitSha = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_COMMIT_SHA } else { $env:OPSLEDGER_MANUAL_COMMIT_SHA }
                   GithubRunId = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_ID } else { $env:OPSLEDGER_MANUAL_GITHUB_RUN_ID }
                   GithubRunAttempt = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_ATTEMPT } else { $env:OPSLEDGER_MANUAL_GITHUB_RUN_ATTEMPT }
-                  GithubRunUrl = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_URL } else { $env:OPSLEDGER_MANUAL_GITHUB_RUN_URL }
-                  ArtifactName = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_ARTIFACT_NAME } else { $env:OPSLEDGER_MANUAL_ARTIFACT_NAME }
+                  GithubRunUrl = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_URL } else { Get-ManualGithubRunUrl }
+                  ArtifactName = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_ARTIFACT_NAME } else { Get-ManualArtifactName }
                   ArtifactSource = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_ARTIFACT_SOURCE } else { $env:OPSLEDGER_MANUAL_ARTIFACT_SOURCE }
               }
 
               Write-Host "Build reason: $buildReason"
 
-              if ($buildReason -ne "ResourceTrigger" -and [string]::IsNullOrWhiteSpace([string]$receivedMetadata["ArtifactName"])) {
+              if ($buildReason -ne "ResourceTrigger" -and [string]::IsNullOrWhiteSpace([string]$receivedMetadata["CommitSha"])) {
                   Write-Host "No existing artifact metadata was provided. This run can register or validate the webhook-enabled pipeline definition."
                   return
               }
@@ -121,14 +130,12 @@ stages:
               OPSLEDGER_MANUAL_COMMIT_SHA: ${{ parameters.manualCommitSha }}
               OPSLEDGER_MANUAL_GITHUB_RUN_ID: ${{ parameters.manualGithubRunId }}
               OPSLEDGER_MANUAL_GITHUB_RUN_ATTEMPT: ${{ parameters.manualGithubRunAttempt }}
-              OPSLEDGER_MANUAL_GITHUB_RUN_URL: ${{ parameters.manualGithubRunUrl }}
-              OPSLEDGER_MANUAL_ARTIFACT_NAME: ${{ parameters.manualArtifactName }}
               OPSLEDGER_MANUAL_ARTIFACT_SOURCE: ${{ parameters.manualArtifactSource }}
 
   - stage: ValidateArtifact
     displayName: Validate published artifact
     dependsOn: ReceiveGitHubArtifactMetadata
-    condition: or(eq(variables['Build.Reason'], 'ResourceTrigger'), ne('${{ parameters.manualArtifactName }}', ''))
+    condition: or(eq(variables['Build.Reason'], 'ResourceTrigger'), ne('${{ parameters.manualCommitSha }}', ''))
     jobs:
       - job: RunBddValidation
         displayName: Run BDD validation
@@ -151,14 +158,31 @@ stages:
               $ErrorActionPreference = "Stop"
 
               [string]$buildReason = $env:BUILD_REASON
+              function Get-ManualArtifactName {
+                  if ([string]::IsNullOrWhiteSpace($env:OPSLEDGER_MANUAL_COMMIT_SHA)) {
+                      return ""
+                  }
+
+                  [int]$shortShaLength = [System.Math]::Min(12, $env:OPSLEDGER_MANUAL_COMMIT_SHA.Length)
+                  return "opsledger-app-win-x64-$($env:OPSLEDGER_MANUAL_COMMIT_SHA.Substring(0, $shortShaLength))"
+              }
+
+              function Get-ManualGithubRunUrl {
+                  if ([string]::IsNullOrWhiteSpace($env:OPSLEDGER_MANUAL_REPOSITORY) -or [string]::IsNullOrWhiteSpace($env:OPSLEDGER_MANUAL_GITHUB_RUN_ID)) {
+                      return ""
+                  }
+
+                  return "https://github.com/$($env:OPSLEDGER_MANUAL_REPOSITORY)/actions/runs/$($env:OPSLEDGER_MANUAL_GITHUB_RUN_ID)"
+              }
+
               [System.Collections.Specialized.OrderedDictionary]$metadata = [ordered]@{
                   Repository = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_REPOSITORY } else { $env:OPSLEDGER_MANUAL_REPOSITORY }
                   Branch = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_BRANCH } else { $env:OPSLEDGER_MANUAL_BRANCH }
                   CommitSha = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_COMMIT_SHA } else { $env:OPSLEDGER_MANUAL_COMMIT_SHA }
                   GithubRunId = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_ID } else { $env:OPSLEDGER_MANUAL_GITHUB_RUN_ID }
                   GithubRunAttempt = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_ATTEMPT } else { $env:OPSLEDGER_MANUAL_GITHUB_RUN_ATTEMPT }
-                  GithubRunUrl = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_URL } else { $env:OPSLEDGER_MANUAL_GITHUB_RUN_URL }
-                  ArtifactName = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_ARTIFACT_NAME } else { $env:OPSLEDGER_MANUAL_ARTIFACT_NAME }
+                  GithubRunUrl = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_GITHUB_RUN_URL } else { Get-ManualGithubRunUrl }
+                  ArtifactName = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_ARTIFACT_NAME } else { Get-ManualArtifactName }
                   ArtifactSource = if ($buildReason -eq "ResourceTrigger") { $env:OPSLEDGER_WEBHOOK_ARTIFACT_SOURCE } else { $env:OPSLEDGER_MANUAL_ARTIFACT_SOURCE }
               }
 
@@ -196,8 +220,6 @@ stages:
               OPSLEDGER_MANUAL_COMMIT_SHA: ${{ parameters.manualCommitSha }}
               OPSLEDGER_MANUAL_GITHUB_RUN_ID: ${{ parameters.manualGithubRunId }}
               OPSLEDGER_MANUAL_GITHUB_RUN_ATTEMPT: ${{ parameters.manualGithubRunAttempt }}
-              OPSLEDGER_MANUAL_GITHUB_RUN_URL: ${{ parameters.manualGithubRunUrl }}
-              OPSLEDGER_MANUAL_ARTIFACT_NAME: ${{ parameters.manualArtifactName }}
               OPSLEDGER_MANUAL_ARTIFACT_SOURCE: ${{ parameters.manualArtifactSource }}
 
           - pwsh: |
