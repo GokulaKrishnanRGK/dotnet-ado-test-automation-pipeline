@@ -144,7 +144,7 @@ do {
     }
     catch {
         if ((Get-Date) -ge $deadline) {
-            throw "PostgreSQL did not become available on $HostName:$Port."
+            throw "PostgreSQL did not become available on ${HostName}:$Port."
         }
 
         Start-Sleep -Seconds 3
@@ -203,7 +203,7 @@ Invoke-PostgreSqlCommand `
 
 $connectionString = "Host=$HostName;Port=$Port;Database=$DatabaseName;Username=$ApplicationUsername;Password=$ApplicationPassword;Include Error Detail=true"
 
-Write-Host "PostgreSQL is ready on $HostName:$Port."
+Write-Host "PostgreSQL is ready on ${HostName}:$Port."
 Write-Host "Database '$DatabaseName' is ready for validation."
 
 if ($SetAzurePipelineVariables) {
