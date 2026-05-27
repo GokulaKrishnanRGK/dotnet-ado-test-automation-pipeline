@@ -161,11 +161,14 @@ jobs:
 
       - name: Publish Windows artifact
         shell: pwsh
-        run: >
-          ./scripts/Publish-OpsLedgerApp.ps1
-          -Target win-x64
-          -Configuration Release
-          -CommitSha "${{ github.sha }}"
+        run: |
+          [hashtable]$publishArguments = @{
+            Target = "win-x64"
+            Configuration = "Release"
+            CommitSha = "${{ github.sha }}"
+          }
+
+          ./scripts/Publish-OpsLedgerApp.ps1 @publishArguments
 
       - name: Resolve artifact path
         id: artifact
@@ -193,14 +196,17 @@ jobs:
           AZDO_INCOMING_WEBHOOK_URL: ${{ secrets.AZDO_INCOMING_WEBHOOK_URL }}
           AZDO_INCOMING_WEBHOOK_SECRET: ${{ secrets.AZDO_INCOMING_WEBHOOK_SECRET }}
           OPSLEDGER_ARTIFACT_NAME: ${{ steps.artifact.outputs.name }}
-        run: >
-          ./scripts/Send-AzureDevOpsValidationTrigger.ps1
-          -WebhookUrl $env:AZDO_INCOMING_WEBHOOK_URL
-          -WebhookSecret $env:AZDO_INCOMING_WEBHOOK_SECRET
-          -Repository "${{ github.repository }}"
-          -Branch "${{ github.ref_name }}"
-          -CommitSha "${{ github.sha }}"
-          -GithubRunId "${{ github.run_id }}"
-          -GithubRunAttempt "${{ github.run_attempt }}"
-          -GithubRunUrl "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          -ArtifactName $env:OPSLEDGER_ARTIFACT_NAME
+        run: |
+          [hashtable]$triggerArguments = @{
+            WebhookUrl = $env:AZDO_INCOMING_WEBHOOK_URL
+            WebhookSecret = $env:AZDO_INCOMING_WEBHOOK_SECRET
+            Repository = "${{ github.repository }}"
+            Branch = "${{ github.ref_name }}"
+            CommitSha = "${{ github.sha }}"
+            GithubRunId = "${{ github.run_id }}"
+            GithubRunAttempt = "${{ github.run_attempt }}"
+            GithubRunUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            ArtifactName = $env:OPSLEDGER_ARTIFACT_NAME
+          }
+
+          ./scripts/Send-AzureDevOpsValidationTrigger.ps1 @triggerArguments
