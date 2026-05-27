@@ -243,8 +243,6 @@ stages:
                 -SetAzurePipelineVariables
             displayName: Install and prepare PostgreSQL
             condition: and(succeeded(), eq(variables['USE_LOCAL_POSTGRESQL'], 'true'))
-            env:
-              OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD: $(OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD)
 
           - pwsh: |
               ./scripts/setup-test-env.ps1 `

@@ -20,6 +20,4 @@ jobs:
 
       - name: Run PostgreSQL setup script
         shell: pwsh
-        env:
-          OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD: ${{ secrets.OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD }}
         run: ./scripts/install-postgresql.ps1
