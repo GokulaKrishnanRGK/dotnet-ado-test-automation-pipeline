@@ -72,8 +72,13 @@ if ($IncludeUi) {
         throw "Interactive Windows UI BDD can only run on a Windows agent."
     }
 
+    [string]$uiEvidenceDirectory = Join-Path $artifactResultsDirectory "ui-evidence"
+    New-Item -ItemType Directory -Path $uiEvidenceDirectory -Force | Out-Null
+    $env:OPSLEDGER_UI_EVIDENCE_DIR = (Resolve-Path -LiteralPath $uiEvidenceDirectory).Path
     $runBddArguments.Framework = "net10.0-windows10.0.19041.0"
     $runBddArguments.DotNetProperties = @("EnableWindowsUiAutomation=true")
+
+    Write-Host "UI BDD evidence directory: $env:OPSLEDGER_UI_EVIDENCE_DIR"
 }
 
 & (Join-Path $PSScriptRoot "Run-BddTests.ps1") @runBddArguments

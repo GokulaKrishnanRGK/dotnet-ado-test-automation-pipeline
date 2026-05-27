@@ -17,6 +17,8 @@ public sealed class WindowsAppAutomationSession : IDisposable
         this.executablePath = executablePath;
     }
 
+    public bool HasMainWindow => mainWindow is not null;
+
     public Window GetMainWindow()
     {
         if (mainWindow is not null)
@@ -34,6 +36,22 @@ public sealed class WindowsAppAutomationSession : IDisposable
         }
 
         return mainWindow;
+    }
+
+    public void CaptureMainWindow(string path)
+    {
+        Window window = GetMainWindow();
+        window.CaptureToFile(path);
+    }
+
+    public void CaptureExistingMainWindow(string path)
+    {
+        if (mainWindow is null)
+        {
+            throw new InvalidOperationException("The OpsLedger Windows app main window is not available.");
+        }
+
+        mainWindow.CaptureToFile(path);
     }
 
     public void Dispose()

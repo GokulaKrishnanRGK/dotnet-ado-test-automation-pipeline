@@ -27,7 +27,7 @@ public sealed class CreateRequestPageObject
         }
     }
 
-    public void SubmitRequest(UiServiceRequestInput request)
+    public void FillRequest(UiServiceRequestInput request)
     {
         elementFinder.EnterText("RequestTitleEntry", request.Title);
         elementFinder.SelectPickerValue("RequestCategoryPicker", request.Category);
@@ -35,6 +35,10 @@ public sealed class CreateRequestPageObject
         elementFinder.EnterText("RequestDescriptionEditor", request.Description);
         elementFinder.EnterText("RequesterNameEntry", request.RequesterName);
         elementFinder.EnterText("RequesterEmailEntry", request.RequesterEmail);
+    }
+
+    public void SubmitRequest()
+    {
         elementFinder.ClickButton("SubmitRequestButton");
     }
 
