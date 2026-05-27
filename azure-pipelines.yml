@@ -255,22 +255,28 @@ stages:
               OPSLEDGER_CONNECTION_STRING: $(OPSLEDGER_CONNECTION_STRING)
 
           - pwsh: |
-              ./scripts/run-bdd.ps1 `
-                -ArtifactPath "$(OPSLEDGER_DOWNLOADED_ARTIFACT_PATH)" `
-                -Configuration Release `
-                -ResultsRoot "$(OPSLEDGER_TEST_RESULTS_ROOT)\bdd-api" `
-                -TestFilter "Category!=ui"
+              [hashtable]$bddArguments = @{
+                ArtifactPath = "$(OPSLEDGER_DOWNLOADED_ARTIFACT_PATH)"
+                Configuration = "Release"
+                ResultsRoot = "$(OPSLEDGER_TEST_RESULTS_ROOT)\bdd-api"
+                TestFilter = "Category!=ui"
+              }
+
+              ./scripts/run-bdd.ps1 @bddArguments
             displayName: Run API and workflow BDD scenarios
             env:
               OPSLEDGER_API_BASE_ADDRESS: $(OPSLEDGER_API_BASE_ADDRESS)
 
           - pwsh: |
-              ./scripts/run-bdd.ps1 `
-                -ArtifactPath "$(OPSLEDGER_DOWNLOADED_ARTIFACT_PATH)" `
-                -Configuration Release `
-                -ResultsRoot "$(OPSLEDGER_TEST_RESULTS_ROOT)\bdd-ui" `
-                -TestFilter "Category=ui" `
-                -IncludeUi
+              [hashtable]$bddArguments = @{
+                ArtifactPath = "$(OPSLEDGER_DOWNLOADED_ARTIFACT_PATH)"
+                Configuration = "Release"
+                ResultsRoot = "$(OPSLEDGER_TEST_RESULTS_ROOT)\bdd-ui"
+                TestFilter = "Category=ui"
+                IncludeUi = $true
+              }
+
+              ./scripts/run-bdd.ps1 @bddArguments
             displayName: Run interactive UI BDD scenarios
             condition: and(succeeded(), eq(variables['RUN_INTERACTIVE_UI_BDD'], 'true'))
             env:
