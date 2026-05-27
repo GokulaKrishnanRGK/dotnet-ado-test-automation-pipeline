@@ -271,7 +271,11 @@ stages:
                 TestFilter = "Category!=ui"
               }
 
-              ./scripts/run-bdd.ps1 @bddArguments
+              [System.Management.Automation.CommandInfo]$bddRunner = Get-Command ./scripts/Run-BddAgainstArtifact.ps1
+              Write-Host "Using BDD runner: $($bddRunner.Source)"
+              Write-Host "BDD runner parameters: $($bddRunner.Parameters.Keys -join ', ')"
+
+              ./scripts/Run-BddAgainstArtifact.ps1 @bddArguments
             displayName: Run API and workflow BDD scenarios
             env:
               OPSLEDGER_API_BASE_ADDRESS: $(OPSLEDGER_API_BASE_ADDRESS)
@@ -285,7 +289,11 @@ stages:
                 IncludeUi = $true
               }
 
-              ./scripts/run-bdd.ps1 @bddArguments
+              [System.Management.Automation.CommandInfo]$bddRunner = Get-Command ./scripts/Run-BddAgainstArtifact.ps1
+              Write-Host "Using BDD runner: $($bddRunner.Source)"
+              Write-Host "BDD runner parameters: $($bddRunner.Parameters.Keys -join ', ')"
+
+              ./scripts/Run-BddAgainstArtifact.ps1 @bddArguments
             displayName: Run interactive UI BDD scenarios
             condition: and(succeeded(), eq(variables['RUN_INTERACTIVE_UI_BDD'], 'true'))
             env:
