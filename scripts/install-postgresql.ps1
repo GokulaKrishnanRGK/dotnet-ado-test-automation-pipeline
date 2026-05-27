@@ -54,6 +54,15 @@ function Find-PostgreSqlTool {
     return $candidate.FullName
 }
 
+function Write-PostgreSqlInstallLog {
+    $installLogPath = Join-Path $env:TEMP "chocolatey\install-postgresql.log"
+
+    if (Test-Path -LiteralPath $installLogPath -PathType Leaf) {
+        Write-Host "PostgreSQL install log:"
+        Get-Content -LiteralPath $installLogPath | Write-Host
+    }
+}
+
 function Invoke-PostgreSqlCommand {
     param(
         [string]$PsqlPath,
@@ -143,6 +152,7 @@ do {
     }
     catch {
         if ((Get-Date) -ge $deadline) {
+            Write-PostgreSqlInstallLog
             throw "PostgreSQL did not become available on ${HostName}:$Port."
         }
 
