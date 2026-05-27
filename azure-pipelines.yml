@@ -384,6 +384,28 @@ stages:
               failTaskOnFailedTests: true
               testRunTitle: OpsLedger BDD validation
 
+          - pwsh: |
+              [string]$pipelineRunUrl = "$(System.CollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)"
+              [hashtable]$workItemArguments = @{
+                OrganizationUrl = "$(System.CollectionUri)"
+                Project = "$(System.TeamProject)"
+                ResultsRoot = "$(OPSLEDGER_TEST_RESULTS_ROOT)"
+                Repository = "$(GITHUB_REPOSITORY)"
+                CommitSha = "$(GITHUB_COMMIT_SHA)"
+                GithubRunUrl = "$(GITHUB_RUN_URL)"
+                ArtifactName = "$(GITHUB_ARTIFACT_NAME)"
+                PipelineRunUrl = $pipelineRunUrl
+                WorkItemType = "Bug"
+              }
+
+              ./scripts/create-ado-work-item.ps1 @workItemArguments
+            displayName: Create or update failed BDD work items
+            condition: failed()
+            continueOnError: true
+            env:
+              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+              ADO_WORK_ITEM_DEDUPE_SALT: $(ADO_WORK_ITEM_DEDUPE_SALT)
+
           - pwsh: ./scripts/stop-test-env.ps1
             displayName: Stop validation environment
             condition: always()
