@@ -41,12 +41,13 @@ function Find-PostgreSqlTool {
     Write-Host "Checking for PostgreSQL tool '$ToolName'."
 
     $command = Get-Command $ToolName -ErrorAction SilentlyContinue
-    if ($null -ne $command) {
+    if ($null -ne $command -and $command.Source -notlike "*\pgAdmin 4\runtime\*") {
         Write-Host "Found PostgreSQL tool '$ToolName' on PATH: $($command.Source)"
         return $command.Source
     }
 
     $candidate = Get-ChildItem -Path "C:\Program Files\PostgreSQL" -Filter $ToolName -Recurse -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -like "*\bin\$ToolName" -and $_.FullName -notlike "*\pgAdmin 4\runtime\*" } |
         Sort-Object -Property FullName -Descending |
         Select-Object -First 1
 
@@ -126,23 +127,30 @@ function Get-PostgreSqlService {
     return $services | Select-Object -First 1
 }
 
-function Start-PostgreSqlService {
+function Start-PostgreSqlServiceIfPresent {
     $service = Get-PostgreSqlService
 
     if ($null -eq $service) {
         Write-Host "No PostgreSQL Windows service was found."
-        return
+        return $false
     }
-
+ 
     Write-Host "PostgreSQL service '$($service.Name)' status: $($service.Status)"
 
     if ($service.Status -ne "Running") {
-        Start-Service -Name $service.Name
-        $service.WaitForStatus("Running", [TimeSpan]::FromSeconds(60))
+        try {
+            Start-Service -Name $service.Name
+            $service.WaitForStatus("Running", [TimeSpan]::FromSeconds(60))
+        }
+        catch {
+            Write-Host "PostgreSQL service '$($service.Name)' could not be started: $($_.Exception.Message)"
+            return $false
+        }
     }
 
     $service = Get-Service -Name $service.Name
     Write-Host "PostgreSQL service '$($service.Name)' status after start attempt: $($service.Status)"
+    return $service.Status -eq "Running"
 }
 
 function Invoke-PostgreSqlCommand {
@@ -280,30 +288,49 @@ function Invoke-PostgreSqlCreateDatabase {
 
 [string]$applicationPassword = New-LocalPassword
 
-Write-Host "Checking whether PostgreSQL is already installed."
+Write-Host "Checking whether PostgreSQL server tools are already installed."
 $psqlCommand = Get-Command psql -ErrorAction SilentlyContinue
-$existingPsql = $null
+$psqlIsOnPath = $null -ne $psqlCommand -and $psqlCommand.Source -notlike "*\pgAdmin 4\runtime\*"
+$existingPsql = Get-ChildItem -Path "C:\Program Files\PostgreSQL" -Filter "psql.exe" -Recurse -ErrorAction SilentlyContinue |
+    Where-Object { $_.FullName -like "*\bin\psql.exe" -and $_.FullName -notlike "*\pgAdmin 4\runtime\*" } |
+    Sort-Object -Property FullName -Descending |
+    Select-Object -First 1
 $postgresInstalledByThisRun = $false
 
-if ($null -ne $psqlCommand) {
+if ($psqlIsOnPath) {
     Write-Host "PostgreSQL appears to be pre-installed because psql is available on PATH: $($psqlCommand.Source)"
 }
-else {
-    $existingPsql = Get-ChildItem -Path "C:\Program Files\PostgreSQL" -Filter "psql.exe" -Recurse -ErrorAction SilentlyContinue |
-        Sort-Object -Property FullName -Descending |
-        Select-Object -First 1
+elseif ($null -ne $psqlCommand) {
+    Write-Host "Ignoring pgAdmin-bundled psql on PATH: $($psqlCommand.Source)"
+}
 
-    if ($null -ne $existingPsql) {
-        Write-Host "PostgreSQL appears to be pre-installed under Program Files: $($existingPsql.FullName)"
-    }
-    else {
-        Write-Host "PostgreSQL was not found. Downloading and installing PostgreSQL."
+if (-not $psqlIsOnPath -and $null -ne $existingPsql) {
+    Write-Host "PostgreSQL server tools appear to be pre-installed under Program Files: $($existingPsql.FullName)"
+}
+
+if ($psqlIsOnPath -or $null -ne $existingPsql) {
+    [bool]$serviceStarted = Start-PostgreSqlServiceIfPresent
+
+    if (-not $serviceStarted) {
+        Write-Host "Existing PostgreSQL server tools were found, but no usable running PostgreSQL service is available."
+        Write-Host "Installing a fresh PostgreSQL server for validation."
         Install-PostgreSql -Url $InstallerUrl -Password $SuperuserPassword
         $postgresInstalledByThisRun = $true
     }
 }
+else {
+    Write-Host "PostgreSQL server tools were not found. Downloading and installing PostgreSQL."
+    Install-PostgreSql -Url $InstallerUrl -Password $SuperuserPassword
+    $postgresInstalledByThisRun = $true
+}
 
-Start-PostgreSqlService
+if ($postgresInstalledByThisRun) {
+    [bool]$installedServiceStarted = Start-PostgreSqlServiceIfPresent
+    if (-not $installedServiceStarted) {
+        Write-PostgreSqlInstallLog
+        throw "PostgreSQL was installed, but its Windows service could not be started."
+    }
+}
 
 $psqlPath = Find-PostgreSqlTool -ToolName "psql.exe"
 $createdbPath = Find-PostgreSqlTool -ToolName "createdb.exe"
@@ -312,7 +339,7 @@ $detectedSuperuserPassword = Find-WorkingPostgreSqlPassword -PsqlPath $psqlPath 
 
 if ($null -eq $detectedSuperuserPassword -and $postgresInstalledByThisRun) {
     Write-Host "PostgreSQL was installed by this run, but no tested password worked yet. Re-running service start and authentication checks."
-    Start-PostgreSqlService
+    Start-PostgreSqlServiceIfPresent | Out-Null
     $detectedSuperuserPassword = Find-WorkingPostgreSqlPassword -PsqlPath $psqlPath -ProvidedPassword $SuperuserPassword
 }
 
