@@ -21,6 +21,7 @@ public sealed class PostgreSqlServiceRequestApiTests : IClassFixture<PostgreSqlF
     }
 
     [PostgreSqlFact]
+    [Trait("Category", "postgresql")]
     public async Task Post_service_requests_persists_request_and_activity_through_stored_procedure()
     {
         CreateServiceRequestApiRequest request = NewRequest("Persisted PostgreSQL request", "Facilities", "High");
@@ -43,6 +44,7 @@ public sealed class PostgreSqlServiceRequestApiTests : IClassFixture<PostgreSqlF
     }
 
     [PostgreSqlFact]
+    [Trait("Category", "postgresql")]
     public async Task Post_comment_rolls_back_activity_when_request_does_not_exist()
     {
         await using OpsLedgerDbContext dbContext = CreateDbContext();

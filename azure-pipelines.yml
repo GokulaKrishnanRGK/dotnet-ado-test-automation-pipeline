@@ -52,6 +52,8 @@ variables:
     value: $(Agent.TempDirectory)\opsledger-test-results
   - name: USE_LOCAL_POSTGRESQL
     value: true
+  - name: RUN_WORK_ITEM_FAILURE_BDD
+    value: false
 
 stages:
   - stage: ReceiveGitHubArtifactMetadata
@@ -360,7 +362,7 @@ stages:
                 ArtifactPath = "$(OPSLEDGER_DOWNLOADED_ARTIFACT_PATH)"
                 Configuration = "Release"
                 ResultsRoot = "$(OPSLEDGER_TEST_RESULTS_ROOT)\bdd-ui"
-                TestFilter = "Category=ui"
+                TestFilter = "Category=ui&Category!=workitem"
                 IncludeUi = $true
               }
 
@@ -371,6 +373,25 @@ stages:
               ./scripts/Run-BddAgainstArtifact.ps1 @bddArguments
             displayName: Run interactive UI BDD scenarios
             condition: and(succeeded(), eq(variables['RUN_INTERACTIVE_UI_BDD'], 'true'))
+            env:
+              OPSLEDGER_API_BASE_ADDRESS: $(OPSLEDGER_API_BASE_ADDRESS)
+
+          - pwsh: |
+              [hashtable]$bddArguments = @{
+                ArtifactPath = "$(OPSLEDGER_DOWNLOADED_ARTIFACT_PATH)"
+                Configuration = "Release"
+                ResultsRoot = "$(OPSLEDGER_TEST_RESULTS_ROOT)\bdd-workitem"
+                TestFilter = "Category=workitem"
+                IncludeUi = $true
+              }
+
+              [System.Management.Automation.CommandInfo]$bddRunner = Get-Command ./scripts/Run-BddAgainstArtifact.ps1
+              Write-Host "Using BDD runner: $($bddRunner.Source)"
+              Write-Host "BDD runner parameters: $($bddRunner.Parameters.Keys -join ', ')"
+
+              ./scripts/Run-BddAgainstArtifact.ps1 @bddArguments
+            displayName: Run failed UI BDD scenarios for work item verification
+            condition: and(succeeded(), eq(variables['RUN_INTERACTIVE_UI_BDD'], 'true'), eq(variables['RUN_WORK_ITEM_FAILURE_BDD'], 'true'))
             env:
               OPSLEDGER_API_BASE_ADDRESS: $(OPSLEDGER_API_BASE_ADDRESS)
 

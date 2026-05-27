@@ -29,3 +29,17 @@ Feature: Windows app workflow
     And the published OpsLedger Windows app is available
     When an employee submits a critical service request without impact details through the Windows app
     Then the Windows app shows "Critical requests require impact details."
+
+  @ui @windows @workitem
+  Scenario: Work item verification captures a failed successful-submit assertion
+    Given the OpsLedger Windows app automation run is enabled
+    And the published OpsLedger Windows app is available
+    When an employee submits a service request through the Windows app
+    Then the Windows app shows "Intentional work item verification failure."
+
+  @ui @windows @workitem
+  Scenario: Work item verification captures a failed validation assertion
+    Given the OpsLedger Windows app automation run is enabled
+    And the published OpsLedger Windows app is available
+    When an employee submits a service request without a title through the Windows app
+    Then the Windows app shows "Service request created."

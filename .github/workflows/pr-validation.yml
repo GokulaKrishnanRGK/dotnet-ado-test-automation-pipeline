@@ -71,6 +71,7 @@ jobs:
           --no-restore
           --logger "trx;LogFileName=OpsLedger.IntegrationTests.trx"
           --results-directory "${{ env.TEST_RESULTS_DIR }}/integration"
+          --filter "Category!=postgresql"
           --collect:"XPlat Code Coverage"
           --
           DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
