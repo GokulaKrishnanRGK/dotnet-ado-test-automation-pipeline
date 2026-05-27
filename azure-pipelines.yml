@@ -44,6 +44,10 @@ variables:
     value: opsledger-coverage-report
   - name: OPSLEDGER_COVERAGE_DOWNLOAD_ROOT
     value: $(Pipeline.Workspace)\opsledger-coverage
+  - name: OPSLEDGER_GITHUB_TEST_RESULTS_ARTIFACT_NAME
+    value: opsledger-test-results
+  - name: OPSLEDGER_GITHUB_TEST_RESULTS_DOWNLOAD_ROOT
+    value: $(Pipeline.Workspace)\opsledger-github-test-results
   - name: OPSLEDGER_TEST_RESULTS_ROOT
     value: $(Agent.TempDirectory)\opsledger-test-results
   - name: USE_LOCAL_POSTGRESQL
@@ -229,6 +233,7 @@ stages:
           - pwsh: |
               New-Item -ItemType Directory -Path "$(OPSLEDGER_ARTIFACT_DOWNLOAD_ROOT)" -Force | Out-Null
               New-Item -ItemType Directory -Path "$(OPSLEDGER_COVERAGE_DOWNLOAD_ROOT)" -Force | Out-Null
+              New-Item -ItemType Directory -Path "$(OPSLEDGER_GITHUB_TEST_RESULTS_DOWNLOAD_ROOT)" -Force | Out-Null
               New-Item -ItemType Directory -Path "$(OPSLEDGER_TEST_RESULTS_ROOT)" -Force | Out-Null
               New-Item -ItemType Directory -Path "$(Pipeline.Workspace)\opsledger-logs" -Force | Out-Null
             displayName: Prepare workspace directories
@@ -260,6 +265,31 @@ stages:
 
               ./scripts/Get-GitHubActionsArtifact.ps1 @downloadArguments
             displayName: Download GitHub Actions coverage report
+
+          - pwsh: |
+              [hashtable]$downloadArguments = @{
+                Repository = "$(GITHUB_REPOSITORY)"
+                RunId = "$(GITHUB_RUN_ID)"
+                ArtifactName = "$(OPSLEDGER_GITHUB_TEST_RESULTS_ARTIFACT_NAME)"
+                Token = "$(GITHUB_ARTIFACT_TOKEN)"
+                OutputRoot = "$(OPSLEDGER_GITHUB_TEST_RESULTS_DOWNLOAD_ROOT)"
+                ArtifactPathVariableName = "OPSLEDGER_DOWNLOADED_GITHUB_TEST_RESULTS_PATH"
+                SetAzurePipelineVariables = $true
+                AllowAnyContent = $true
+              }
+
+              ./scripts/Get-GitHubActionsArtifact.ps1 @downloadArguments
+            displayName: Download GitHub Actions test results
+
+          - task: PublishTestResults@2
+            displayName: Publish GitHub CI test results
+            condition: always()
+            inputs:
+              testResultsFormat: VSTest
+              testResultsFiles: '**\*.trx'
+              searchFolder: $(OPSLEDGER_DOWNLOADED_GITHUB_TEST_RESULTS_PATH)
+              failTaskOnFailedTests: true
+              testRunTitle: OpsLedger GitHub CI validation
 
           - pwsh: |
               [string]$coverageSummaryPath = Join-Path "$(OPSLEDGER_DOWNLOADED_COVERAGE_PATH)" "Cobertura.xml"
