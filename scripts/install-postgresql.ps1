@@ -63,6 +63,33 @@ function Write-PostgreSqlInstallLog {
     }
 }
 
+function Get-PostgreSqlService {
+    $services = @(Get-Service -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like "postgresql*" -or $_.DisplayName -like "postgresql*" } |
+        Sort-Object -Property Name)
+
+    return $services | Select-Object -First 1
+}
+
+function Start-PostgreSqlService {
+    $service = Get-PostgreSqlService
+
+    if ($null -eq $service) {
+        Write-Host "No PostgreSQL Windows service was found."
+        return
+    }
+
+    Write-Host "PostgreSQL service '$($service.Name)' status: $($service.Status)"
+
+    if ($service.Status -ne "Running") {
+        Start-Service -Name $service.Name
+        $service.WaitForStatus("Running", [TimeSpan]::FromSeconds(60))
+    }
+
+    $service = Get-Service -Name $service.Name
+    Write-Host "PostgreSQL service '$($service.Name)' status after start attempt: $($service.Status)"
+}
+
 function Invoke-PostgreSqlCommand {
     param(
         [string]$PsqlPath,
@@ -140,6 +167,8 @@ if ($null -eq $psqlCommand) {
         throw "PostgreSQL installation failed."
     }
 }
+
+Start-PostgreSqlService
 
 $psqlPath = Find-PostgreSqlTool -ToolName "psql.exe"
 $createdbPath = Find-PostgreSqlTool -ToolName "createdb.exe"
