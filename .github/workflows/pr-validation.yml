@@ -109,10 +109,14 @@ jobs:
           "${{ env.REPORTGENERATOR_DIR }}/reportgenerator"
           -reports:"${{ env.TEST_RESULTS_DIR }}/**/coverage.cobertura.xml"
           -targetdir:"${{ env.COVERAGE_REPORT_DIR }}"
-          -reporttypes:"HtmlInline_AzurePipelines;Cobertura;MarkdownSummaryGithub"
+          -reporttypes:"Html;HtmlInline_AzurePipelines;Cobertura;MarkdownSummaryGithub"
           -assemblyfilters:"+OpsLedger.*;-*.Tests"
           -classfilters:"-*.Migrations.*"
           -filefilters:"-**/Migrations/*.cs;-**/*.Designer.cs;-**/Platforms/**/*.cs;-**/obj/**/*.cs"
+
+      - name: Verify coverage report HTML
+        if: ${{ always() && hashFiles('artifacts/coverage-report/Cobertura.xml') != '' }}
+        run: test -f "${{ env.COVERAGE_REPORT_DIR }}/index.html"
 
       - name: Append coverage summary
         if: ${{ always() && hashFiles('artifacts/coverage-report/SummaryGithub.md') != '' }}
