@@ -5,6 +5,7 @@ using FlaUI.Core.Exceptions;
 using FlaUI.Core.Input;
 using FlaUI.Core.Patterns;
 using FlaUI.Core.Tools;
+using FlaUI.Core.WindowsAPI;
 
 namespace OpsLedger.BddTests.Support.UiAutomation;
 
