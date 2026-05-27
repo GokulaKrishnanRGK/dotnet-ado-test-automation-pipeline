@@ -309,6 +309,12 @@ stages:
               failTaskOnFailedTests: true
               testRunTitle: OpsLedger BDD validation
 
+          - pwsh: ./scripts/stop-test-env.ps1
+            displayName: Stop validation environment
+            condition: always()
+            env:
+              OPSLEDGER_API_PROCESS_ID: $(OPSLEDGER_API_PROCESS_ID)
+
           - publish: $(OPSLEDGER_TEST_RESULTS_ROOT)
             displayName: Publish BDD result artifacts
             condition: always()
@@ -318,9 +324,3 @@ stages:
             displayName: Publish validation logs
             condition: always()
             artifact: opsledger-validation-logs
-
-          - pwsh: ./scripts/stop-test-env.ps1
-            displayName: Stop validation environment
-            condition: always()
-            env:
-              OPSLEDGER_API_PROCESS_ID: $(OPSLEDGER_API_PROCESS_ID)
