@@ -52,8 +52,6 @@ variables:
     value: $(Agent.TempDirectory)\opsledger-test-results
   - name: USE_LOCAL_POSTGRESQL
     value: true
-  - name: RUN_WORK_ITEM_FAILURE_BDD
-    value: false
 
 stages:
   - stage: ReceiveGitHubArtifactMetadata
