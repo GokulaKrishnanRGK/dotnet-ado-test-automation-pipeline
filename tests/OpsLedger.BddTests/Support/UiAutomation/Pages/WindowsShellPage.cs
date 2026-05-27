@@ -23,8 +23,7 @@ public sealed class WindowsShellPage
         }
 
         AutomationElement createTab = elementFinder.FindByName("Create");
-        createTab.Click();
-        Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(5));
+        elementFinder.ClickElement(createTab);
 
         createRequestPage.WaitUntilOpen();
         return createRequestPage;

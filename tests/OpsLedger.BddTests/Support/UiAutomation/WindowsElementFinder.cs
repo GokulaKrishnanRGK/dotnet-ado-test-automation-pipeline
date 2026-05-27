@@ -1,7 +1,9 @@
 #if WINDOWS
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Conditions;
+using FlaUI.Core.Exceptions;
 using FlaUI.Core.Input;
+using FlaUI.Core.Patterns;
 using FlaUI.Core.Tools;
 
 namespace OpsLedger.BddTests.Support.UiAutomation;
@@ -58,23 +60,50 @@ public sealed class WindowsElementFinder
 
     public void EnterText(string automationId, string value)
     {
-        TextBox textBox = FindByAutomationId(automationId).AsTextBox();
-        textBox.Text = string.Empty;
-        textBox.Enter(value);
+        AutomationElement element = FindByAutomationId(automationId);
+
+        if (!TrySetValuePatternText(element, value))
+        {
+            element.Focus();
+            Keyboard.TypeSimultaneously([VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_A]);
+            Keyboard.Type(value);
+        }
+
         Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(5));
     }
 
     public void SelectPickerValue(string automationId, string value)
     {
-        ComboBox comboBox = FindByAutomationId(automationId).AsComboBox();
-        comboBox.Select(value);
+        AutomationElement picker = FindByAutomationId(automationId);
+
+        try
+        {
+            picker.AsComboBox().Select(value);
+        }
+        catch (Exception exception) when (IsRecoverableAutomationException(exception))
+        {
+            TryClickElement(picker);
+            Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(5));
+
+            AutomationElement option = FindByName(value);
+            TryClickElement(option);
+        }
+
         Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(5));
     }
 
     public void ClickButton(string automationId)
     {
-        Button button = FindByAutomationId(automationId).AsButton();
-        button.Invoke();
+        ClickElement(FindByAutomationId(automationId));
+    }
+
+    public void ClickElement(AutomationElement element)
+    {
+        if (!TryInvokeElement(element))
+        {
+            TryClickElement(element);
+        }
+
         Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(5));
     }
 
@@ -84,7 +113,7 @@ public sealed class WindowsElementFinder
             () =>
             {
                 AutomationElement? labelElement = TryFindByAutomationId(automationId, TimeSpan.FromSeconds(1));
-                return labelElement?.AsLabel().Text ?? string.Empty;
+                return labelElement is null ? string.Empty : ReadElementText(labelElement);
             },
             labelText => string.IsNullOrWhiteSpace(labelText),
             timeout,
@@ -96,6 +125,116 @@ public sealed class WindowsElementFinder
         }
 
         return result.Result;
+    }
+
+    private static string ReadElementText(AutomationElement element)
+    {
+        string valueText = ReadValuePatternText(element);
+
+        if (!string.IsNullOrWhiteSpace(valueText))
+        {
+            return valueText;
+        }
+
+        string nameText = ReadNameText(element);
+
+        return nameText;
+    }
+
+    private static string ReadValuePatternText(AutomationElement element)
+    {
+        try
+        {
+            IValuePattern? valuePattern = element.Patterns.Value.PatternOrDefault;
+            return valuePattern?.Value.Value ?? string.Empty;
+        }
+        catch (PropertyNotSupportedException)
+        {
+            return string.Empty;
+        }
+        catch (PatternNotSupportedException)
+        {
+            return string.Empty;
+        }
+    }
+
+    private static bool TrySetValuePatternText(AutomationElement element, string value)
+    {
+        try
+        {
+            IValuePattern? valuePattern = element.Patterns.Value.PatternOrDefault;
+
+            if (valuePattern is null)
+            {
+                return false;
+            }
+
+            valuePattern.SetValue(value);
+            return true;
+        }
+        catch (PropertyNotSupportedException)
+        {
+            return false;
+        }
+        catch (PatternNotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryInvokeElement(AutomationElement element)
+    {
+        try
+        {
+            IInvokePattern? invokePattern = element.Patterns.Invoke.PatternOrDefault;
+
+            if (invokePattern is null)
+            {
+                return false;
+            }
+
+            invokePattern.Invoke();
+            return true;
+        }
+        catch (PropertyNotSupportedException)
+        {
+            return false;
+        }
+        catch (PatternNotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    private static void TryClickElement(AutomationElement element)
+    {
+        try
+        {
+            element.Click();
+        }
+        catch (Exception exception) when (IsRecoverableAutomationException(exception))
+        {
+            throw new InvalidOperationException("The UI element could not be clicked through UI Automation.", exception);
+        }
+    }
+
+    private static string ReadNameText(AutomationElement element)
+    {
+        try
+        {
+            return element.Properties.Name.Value ?? string.Empty;
+        }
+        catch (PropertyNotSupportedException)
+        {
+            return string.Empty;
+        }
+    }
+
+    private static bool IsRecoverableAutomationException(Exception exception)
+    {
+        return exception is PropertyNotSupportedException ||
+            exception is PatternNotSupportedException ||
+            exception is InvalidOperationException;
     }
 }
 #endif
