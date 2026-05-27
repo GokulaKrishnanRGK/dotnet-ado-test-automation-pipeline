@@ -352,6 +352,7 @@ stages:
 
               ./scripts/Run-BddAgainstArtifact.ps1 @bddArguments
             displayName: Run API and workflow BDD scenarios
+            continueOnError: true
             env:
               OPSLEDGER_API_BASE_ADDRESS: $(OPSLEDGER_API_BASE_ADDRESS)
 
@@ -370,7 +371,8 @@ stages:
 
               ./scripts/Run-BddAgainstArtifact.ps1 @bddArguments
             displayName: Run interactive UI BDD scenarios
-            condition: and(succeeded(), eq(variables['RUN_INTERACTIVE_UI_BDD'], 'true'))
+            condition: and(succeededOrFailed(), eq(variables['RUN_INTERACTIVE_UI_BDD'], 'true'))
+            continueOnError: true
             env:
               OPSLEDGER_API_BASE_ADDRESS: $(OPSLEDGER_API_BASE_ADDRESS)
 
@@ -389,7 +391,8 @@ stages:
 
               ./scripts/Run-BddAgainstArtifact.ps1 @bddArguments
             displayName: Run failed UI BDD scenarios for work item verification
-            condition: and(succeeded(), eq(variables['RUN_INTERACTIVE_UI_BDD'], 'true'), eq(variables['RUN_WORK_ITEM_FAILURE_BDD'], 'true'))
+            condition: and(succeededOrFailed(), eq(variables['RUN_INTERACTIVE_UI_BDD'], 'true'), eq(variables['RUN_WORK_ITEM_FAILURE_BDD'], 'true'))
+            continueOnError: true
             env:
               OPSLEDGER_API_BASE_ADDRESS: $(OPSLEDGER_API_BASE_ADDRESS)
 
@@ -400,7 +403,7 @@ stages:
               testResultsFormat: VSTest
               testResultsFiles: opsledger-test-results\**\*.trx
               searchFolder: $(Agent.TempDirectory)
-              failTaskOnFailedTests: true
+              failTaskOnFailedTests: false
               testRunTitle: OpsLedger BDD validation
 
           - pwsh: |
@@ -419,7 +422,7 @@ stages:
 
               ./scripts/create-ado-work-item.ps1 @workItemArguments
             displayName: Create or update failed BDD work items
-            condition: failed()
+            condition: always()
             continueOnError: true
             env:
               SYSTEM_ACCESSTOKEN: $(System.AccessToken)

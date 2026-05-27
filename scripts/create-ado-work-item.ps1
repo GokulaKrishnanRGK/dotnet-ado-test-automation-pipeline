@@ -262,7 +262,7 @@ foreach ($failure in $failedTests) {
             $createPatch += New-WorkItemPatch -Operation "add" -Path "/fields/System.AssignedTo" -Value $AssignedTo
         }
 
-        [string]$createUri = "$normalizedOrganizationUrl/$Project/_apis/wit/workitems/`$$WorkItemType?api-version=7.1"
+        [string]$createUri = "$normalizedOrganizationUrl/$Project/_apis/wit/workitems/`$${WorkItemType}?api-version=7.1"
         $created = Invoke-AzureDevOpsJsonApi `
             -Method Patch `
             -Uri $createUri `
