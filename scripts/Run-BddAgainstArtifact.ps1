@@ -50,24 +50,21 @@ Write-Host "Running BDD tests against artifact '$($metadata.artifactName)'"
 Write-Host "Executable: $executablePath"
 Write-Host "Commit: $($metadata.commitSha)"
 
-$runBddArguments = @(
-    "-Configuration"
-    $Configuration
-    "-ResultsDirectory"
-    $artifactResultsDirectory
-)
+[hashtable]$runBddArguments = @{
+    Configuration = $Configuration
+    ResultsDirectory = $artifactResultsDirectory
+}
 
 if ($NoRestore) {
-    $runBddArguments += "-NoRestore"
+    $runBddArguments.NoRestore = $true
 }
 
 if ($NoBuild) {
-    $runBddArguments += "-NoBuild"
+    $runBddArguments.NoBuild = $true
 }
 
 if ($TestFilter) {
-    $runBddArguments += "-TestFilter"
-    $runBddArguments += $TestFilter
+    $runBddArguments.TestFilter = $TestFilter
 }
 
 if ($IncludeUi) {
@@ -75,10 +72,8 @@ if ($IncludeUi) {
         throw "Interactive Windows UI BDD can only run on a Windows agent."
     }
 
-    $runBddArguments += "-Framework"
-    $runBddArguments += "net10.0-windows10.0.19041.0"
-    $runBddArguments += "-DotNetProperties"
-    $runBddArguments += "EnableWindowsUiAutomation=true"
+    $runBddArguments.Framework = "net10.0-windows10.0.19041.0"
+    $runBddArguments.DotNetProperties = @("EnableWindowsUiAutomation=true")
 }
 
 & (Join-Path $PSScriptRoot "Run-BddTests.ps1") @runBddArguments
