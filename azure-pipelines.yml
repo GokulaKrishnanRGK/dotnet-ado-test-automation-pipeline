@@ -229,27 +229,36 @@ stages:
             displayName: Prepare workspace directories
 
           - pwsh: |
-              ./scripts/Get-GitHubActionsArtifact.ps1 `
-                -Repository "$(GITHUB_REPOSITORY)" `
-                -RunId "$(GITHUB_RUN_ID)" `
-                -ArtifactName "$(GITHUB_ARTIFACT_NAME)" `
-                -Token "$(GITHUB_ARTIFACT_TOKEN)" `
-                -OutputRoot "$(OPSLEDGER_ARTIFACT_DOWNLOAD_ROOT)" `
-                -SetAzurePipelineVariables
+              [hashtable]$downloadArguments = @{
+                Repository = "$(GITHUB_REPOSITORY)"
+                RunId = "$(GITHUB_RUN_ID)"
+                ArtifactName = "$(GITHUB_ARTIFACT_NAME)"
+                Token = "$(GITHUB_ARTIFACT_TOKEN)"
+                OutputRoot = "$(OPSLEDGER_ARTIFACT_DOWNLOAD_ROOT)"
+                SetAzurePipelineVariables = $true
+              }
+
+              ./scripts/Get-GitHubActionsArtifact.ps1 @downloadArguments
             displayName: Download GitHub Actions artifact
 
           - pwsh: |
-              ./scripts/install-postgresql.ps1 `
-                -SetAzurePipelineVariables
+              [hashtable]$postgresArguments = @{
+                SetAzurePipelineVariables = $true
+              }
+
+              ./scripts/install-postgresql.ps1 @postgresArguments
             displayName: Install and prepare PostgreSQL
             condition: and(succeeded(), eq(variables['USE_LOCAL_POSTGRESQL'], 'true'))
 
           - pwsh: |
-              ./scripts/setup-test-env.ps1 `
-                -ApiBaseAddress "$(OPSLEDGER_API_BASE_ADDRESS)" `
-                -StorageProvider "PostgreSql" `
-                -LogDirectory "$(Pipeline.Workspace)\opsledger-logs" `
-                -MetadataPath "$(Pipeline.Workspace)\opsledger-test-env.json"
+              [hashtable]$setupArguments = @{
+                ApiBaseAddress = "$(OPSLEDGER_API_BASE_ADDRESS)"
+                StorageProvider = "PostgreSql"
+                LogDirectory = "$(Pipeline.Workspace)\opsledger-logs"
+                MetadataPath = "$(Pipeline.Workspace)\opsledger-test-env.json"
+              }
+
+              ./scripts/setup-test-env.ps1 @setupArguments
             displayName: Prepare validation environment
             env:
               OPSLEDGER_CONNECTION_STRING: $(OPSLEDGER_CONNECTION_STRING)

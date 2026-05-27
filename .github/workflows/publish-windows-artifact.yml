@@ -38,17 +38,29 @@ jobs:
 
       - name: Publish Windows artifact
         shell: pwsh
-        run: >
-          ./scripts/Publish-OpsLedgerApp.ps1
-          -Target win-x64
-          -Configuration "${{ inputs.configuration }}"
-          -CommitSha "${{ github.sha }}"
+        run: |
+          [hashtable]$publishArguments = @{
+            Target = "win-x64"
+            Configuration = "${{ inputs.configuration }}"
+            CommitSha = "${{ github.sha }}"
+          }
+
+          ./scripts/Publish-OpsLedgerApp.ps1 @publishArguments
 
       - name: Validate Windows artifact metadata
         shell: pwsh
-        run: >
-          ./scripts/Test-OpsLedgerArtifact.ps1
-          -ArtifactPath (Get-ChildItem -Directory artifacts/opsledger-app-win-x64-* | Select-Object -First 1).FullName
+        run: |
+          [System.IO.DirectoryInfo]$artifactDirectory = Get-ChildItem -Directory artifacts/opsledger-app-win-x64-* | Select-Object -First 1
+
+          if ($null -eq $artifactDirectory) {
+            throw "Windows artifact directory was not created."
+          }
+
+          [hashtable]$testArguments = @{
+            ArtifactPath = $artifactDirectory.FullName
+          }
+
+          ./scripts/Test-OpsLedgerArtifact.ps1 @testArguments
 
       - name: Resolve artifact path
         id: artifact
