@@ -13,6 +13,7 @@ public sealed class ServiceRequestWorkflowSteps : IDisposable
     private BddApiFactory? apiFactory;
     private HttpClient? client;
     private HttpResponseMessage? lastResponse;
+    private IReadOnlyList<string>? lastValidationErrors;
     private ServiceRequestApiResponse? submittedRequest;
     private ServiceRequestApiResponse? currentRequest;
     private IReadOnlyList<ServiceRequestApiResponse>? filteredQueue;
@@ -28,6 +29,7 @@ public sealed class ServiceRequestWorkflowSteps : IDisposable
     public async Task WhenAnEmployeeSubmitsARequest(string priority, string category, string title)
     {
         lastResponse = await SubmitRequestAsync(priority, category, title);
+        lastValidationErrors = null;
 
         if (lastResponse.StatusCode == HttpStatusCode.Created)
         {
@@ -40,6 +42,7 @@ public sealed class ServiceRequestWorkflowSteps : IDisposable
     public async Task GivenAnEmployeeSubmittedARequest(string priority, string category, string title)
     {
         lastResponse = await SubmitRequestAsync(priority, category, title);
+        lastValidationErrors = null;
         lastResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
         ServiceRequestApiResponse? created =
@@ -64,6 +67,24 @@ public sealed class ServiceRequestWorkflowSteps : IDisposable
             ImpactDetails: "");
 
         lastResponse = await apiClient.PostAsJsonAsync("/service-requests", request);
+        lastValidationErrors = null;
+    }
+
+    [When("an employee submits a request with a missing title and invalid requester email")]
+    public async Task WhenAnEmployeeSubmitsARequestWithAMissingTitleAndInvalidRequesterEmail()
+    {
+        HttpClient apiClient = GetClient();
+        CreateServiceRequestApiRequest request = new(
+            Title: "",
+            Category: "Facilities",
+            Priority: "Normal",
+            Description: "The team area monitor is flickering.",
+            RequesterName: "Riley Chen",
+            RequesterEmail: "not-an-email",
+            ImpactDetails: null);
+
+        lastResponse = await apiClient.PostAsJsonAsync("/service-requests", request);
+        lastValidationErrors = null;
     }
 
     [When("an operator assigns the request to {string}")]
@@ -75,6 +96,7 @@ public sealed class ServiceRequestWorkflowSteps : IDisposable
         lastResponse = await apiClient.PatchAsJsonAsync(
             $"/service-requests/{currentRequest!.Id}/assignment",
             new AssignServiceRequestApiRequest(assigneeName));
+        lastValidationErrors = null;
 
         if (lastResponse.StatusCode == HttpStatusCode.OK)
         {
@@ -92,6 +114,18 @@ public sealed class ServiceRequestWorkflowSteps : IDisposable
     public async Task WhenAnOperatorResolvesTheRequestWith(string resolutionNotes)
     {
         await ResolveCurrentRequestAsync(resolutionNotes);
+    }
+
+    [When("an operator adds the comment {string}")]
+    public async Task WhenAnOperatorAddsTheComment(string commentBody)
+    {
+        await AddCommentToCurrentRequestAsync("Morgan Lee", commentBody);
+    }
+
+    [When("an operator adds an empty comment")]
+    public async Task WhenAnOperatorAddsAnEmptyComment()
+    {
+        await AddCommentToCurrentRequestAsync("Morgan Lee", string.Empty);
     }
 
     [When("an operator filters the queue by {string} priority and {string} status")]
@@ -150,6 +184,24 @@ public sealed class ServiceRequestWorkflowSteps : IDisposable
         currentRequest!.ResolutionNotes.Should().Be(resolutionNotes);
     }
 
+    [Then("the request contains a comment from {string} saying {string}")]
+    public void ThenTheRequestContainsACommentFromSaying(string authorName, string commentBody)
+    {
+        lastResponse.Should().NotBeNull();
+        lastResponse!.StatusCode.Should().Be(HttpStatusCode.OK);
+        currentRequest.Should().NotBeNull();
+        currentRequest!.Comments.Should().ContainSingle(comment =>
+            comment.AuthorName == authorName &&
+            comment.Body == commentBody);
+    }
+
+    [Then("the request activity includes {string}")]
+    public void ThenTheRequestActivityIncludes(string activityType)
+    {
+        currentRequest.Should().NotBeNull();
+        currentRequest!.Activity.Should().Contain(activityType);
+    }
+
     [Then("the queue includes {string}")]
     public void ThenTheQueueIncludes(string title)
     {
@@ -170,11 +222,8 @@ public sealed class ServiceRequestWorkflowSteps : IDisposable
         lastResponse.Should().NotBeNull();
         lastResponse!.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        ValidationErrorResponse? validation =
-            await lastResponse.Content.ReadFromJsonAsync<ValidationErrorResponse>();
-
-        validation.Should().NotBeNull();
-        validation!.Errors.Should().Contain(expectedError);
+        IReadOnlyList<string> errors = await GetLastValidationErrorsAsync();
+        errors.Should().Contain(expectedError);
     }
 
     public void Dispose()
@@ -213,10 +262,45 @@ public sealed class ServiceRequestWorkflowSteps : IDisposable
         lastResponse = await apiClient.PatchAsJsonAsync(
             $"/service-requests/{currentRequest!.Id}/resolution",
             new ResolveServiceRequestApiRequest(resolutionNotes));
+        lastValidationErrors = null;
 
         if (lastResponse.StatusCode == HttpStatusCode.OK)
         {
             currentRequest = await lastResponse.Content.ReadFromJsonAsync<ServiceRequestApiResponse>();
         }
+    }
+
+    private async Task AddCommentToCurrentRequestAsync(string authorName, string commentBody)
+    {
+        currentRequest.Should().NotBeNull();
+
+        HttpClient apiClient = GetClient();
+        lastResponse = await apiClient.PostAsJsonAsync(
+            $"/service-requests/{currentRequest!.Id}/comments",
+            new AddServiceRequestCommentApiRequest(authorName, commentBody));
+        lastValidationErrors = null;
+
+        if (lastResponse.StatusCode == HttpStatusCode.OK)
+        {
+            currentRequest = await lastResponse.Content.ReadFromJsonAsync<ServiceRequestApiResponse>();
+        }
+    }
+
+    private async Task<IReadOnlyList<string>> GetLastValidationErrorsAsync()
+    {
+        if (lastValidationErrors is not null)
+        {
+            return lastValidationErrors;
+        }
+
+        lastResponse.Should().NotBeNull();
+
+        ValidationErrorResponse? validation =
+            await lastResponse!.Content.ReadFromJsonAsync<ValidationErrorResponse>();
+
+        validation.Should().NotBeNull();
+        lastValidationErrors = validation!.Errors;
+
+        return lastValidationErrors;
     }
 }

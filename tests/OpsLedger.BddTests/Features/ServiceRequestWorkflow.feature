@@ -16,6 +16,13 @@ Feature: Service request workflow
     Then the request is rejected with "Critical requests require impact details."
 
   @api
+  Scenario: Reject a request with missing title and invalid requester email
+    Given the OpsLedger API is available
+    When an employee submits a request with a missing title and invalid requester email
+    Then the request is rejected with "Title is required."
+    And the request is rejected with "Requester email must be a valid email address."
+
+  @api
   Scenario: Assign a request and move it to In Progress
     Given the OpsLedger API is available
     And an employee submitted a "Normal" priority "IT" request titled "Install accounting software"
@@ -37,6 +44,21 @@ Feature: Service request workflow
     When an operator resolves the request with "Access exception reviewed and closed."
     Then the request status is "Resolved"
     And the request resolution notes are "Access exception reviewed and closed."
+
+  @api
+  Scenario: Add a comment to a request
+    Given the OpsLedger API is available
+    And an employee submitted a "Normal" priority "IT" request titled "Replace docking station"
+    When an operator adds the comment "Waiting on replacement hardware."
+    Then the request contains a comment from "Morgan Lee" saying "Waiting on replacement hardware."
+    And the request activity includes "CommentAdded"
+
+  @api
+  Scenario: Reject an empty comment
+    Given the OpsLedger API is available
+    And an employee submitted a "Normal" priority "Facilities" request titled "Repair loose desk leg"
+    When an operator adds an empty comment
+    Then the request is rejected with "Comment body is required."
 
   @api
   Scenario: Filter the queue by priority and status
