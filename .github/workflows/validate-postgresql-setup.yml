@@ -18,16 +18,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate PostgreSQL install password
-        id: postgres-password
-        shell: pwsh
-        run: |
-          $password = "OpsLedgerPg17_" + [System.Guid]::NewGuid().ToString("N").Substring(0, 16) + "!"
-          "password=$password" >> $env:GITHUB_OUTPUT
-          "::add-mask::$password"
-
       - name: Run PostgreSQL setup script
         shell: pwsh
         env:
-          OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD: ${{ steps.postgres-password.outputs.password }}
+          OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD: ${{ secrets.OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD }}
         run: ./scripts/install-postgresql.ps1
