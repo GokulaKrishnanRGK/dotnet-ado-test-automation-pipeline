@@ -94,7 +94,6 @@ function Install-PostgreSql {
     )
 
     Write-Host "Installing PostgreSQL with unattended installer."
-    Write-Host "Installer arguments: $($installerArguments -join ' ')"
 
     $installerProcess = Start-Process `
         -FilePath $installerPath `
@@ -165,6 +164,68 @@ function Invoke-PostgreSqlCommand {
     }
 }
 
+function Test-PostgreSqlPassword {
+    param(
+        [string]$PsqlPath,
+        [string]$Password,
+        [string]$Label
+    )
+
+    $previousPassword = $env:PGPASSWORD
+
+    if ($null -eq $Password) {
+        Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:PGPASSWORD = $Password
+    }
+
+    try {
+        & $PsqlPath `
+            --host $HostName `
+            --port $Port `
+            --username $SuperuserName `
+            --dbname postgres `
+            --no-password `
+            --tuples-only `
+            --command "SELECT 1;" | Out-Null
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "PostgreSQL superuser authentication succeeded with $Label."
+            return $true
+        }
+
+        Write-Host "PostgreSQL superuser authentication failed with $Label."
+        return $false
+    }
+    finally {
+        if ($null -eq $previousPassword) {
+            Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:PGPASSWORD = $previousPassword
+        }
+    }
+}
+
+function Find-WorkingPostgreSqlPassword {
+    param([string]$PsqlPath)
+
+    if (Test-PostgreSqlPassword -PsqlPath $PsqlPath -Password $null -Label "no password") {
+        return ""
+    }
+
+    if (Test-PostgreSqlPassword -PsqlPath $PsqlPath -Password "root" -Label "password 'root'") {
+        return "root"
+    }
+
+    if (Test-PostgreSqlPassword -PsqlPath $PsqlPath -Password "postgres" -Label "password 'postgres'") {
+        return "postgres"
+    }
+
+    return $null
+}
+
 function Invoke-PostgreSqlCreateDatabase {
     param(
         [string]$CreatedbPath,
@@ -191,14 +252,14 @@ function Invoke-PostgreSqlCreateDatabase {
     }
 }
 
-if ([string]::IsNullOrWhiteSpace($SuperuserPassword) -or (Test-UnresolvedAzureMacro -Value $SuperuserPassword)) {
-    throw "OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD must be set for local PostgreSQL installation."
-}
-
 [string]$applicationPassword = New-LocalPassword
 
 $psqlCommand = Get-Command psql -ErrorAction SilentlyContinue
 if ($null -eq $psqlCommand) {
+    if ([string]::IsNullOrWhiteSpace($SuperuserPassword) -or (Test-UnresolvedAzureMacro -Value $SuperuserPassword)) {
+        throw "OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD must be set for local PostgreSQL installation."
+    }
+
     Install-PostgreSql -Url $InstallerUrl -Password $SuperuserPassword
 }
 
@@ -206,6 +267,15 @@ Start-PostgreSqlService
 
 $psqlPath = Find-PostgreSqlTool -ToolName "psql.exe"
 $createdbPath = Find-PostgreSqlTool -ToolName "createdb.exe"
+
+$detectedSuperuserPassword = Find-WorkingPostgreSqlPassword -PsqlPath $psqlPath
+
+if ($null -ne $detectedSuperuserPassword) {
+    $SuperuserPassword = $detectedSuperuserPassword
+}
+elseif ([string]::IsNullOrWhiteSpace($SuperuserPassword) -or (Test-UnresolvedAzureMacro -Value $SuperuserPassword)) {
+    throw "PostgreSQL is installed but no known local password worked. Set OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD or install PostgreSQL with passwordless local access."
+}
 
 $deadline = (Get-Date).AddSeconds(90)
 do {
