@@ -40,6 +40,10 @@ variables:
     value: http://localhost:5184
   - name: OPSLEDGER_ARTIFACT_DOWNLOAD_ROOT
     value: $(Pipeline.Workspace)\opsledger-artifacts
+  - name: OPSLEDGER_COVERAGE_ARTIFACT_NAME
+    value: opsledger-coverage-report
+  - name: OPSLEDGER_COVERAGE_DOWNLOAD_ROOT
+    value: $(Pipeline.Workspace)\opsledger-coverage
   - name: OPSLEDGER_TEST_RESULTS_ROOT
     value: $(Agent.TempDirectory)\opsledger-test-results
   - name: USE_LOCAL_POSTGRESQL
@@ -224,6 +228,7 @@ stages:
 
           - pwsh: |
               New-Item -ItemType Directory -Path "$(OPSLEDGER_ARTIFACT_DOWNLOAD_ROOT)" -Force | Out-Null
+              New-Item -ItemType Directory -Path "$(OPSLEDGER_COVERAGE_DOWNLOAD_ROOT)" -Force | Out-Null
               New-Item -ItemType Directory -Path "$(OPSLEDGER_TEST_RESULTS_ROOT)" -Force | Out-Null
               New-Item -ItemType Directory -Path "$(Pipeline.Workspace)\opsledger-logs" -Force | Out-Null
             displayName: Prepare workspace directories
@@ -240,6 +245,46 @@ stages:
 
               ./scripts/Get-GitHubActionsArtifact.ps1 @downloadArguments
             displayName: Download GitHub Actions artifact
+
+          - pwsh: |
+              [hashtable]$downloadArguments = @{
+                Repository = "$(GITHUB_REPOSITORY)"
+                RunId = "$(GITHUB_RUN_ID)"
+                ArtifactName = "$(OPSLEDGER_COVERAGE_ARTIFACT_NAME)"
+                Token = "$(GITHUB_ARTIFACT_TOKEN)"
+                OutputRoot = "$(OPSLEDGER_COVERAGE_DOWNLOAD_ROOT)"
+                ArtifactPathVariableName = "OPSLEDGER_DOWNLOADED_COVERAGE_PATH"
+                SetAzurePipelineVariables = $true
+                AllowAnyContent = $true
+              }
+
+              ./scripts/Get-GitHubActionsArtifact.ps1 @downloadArguments
+            displayName: Download GitHub Actions coverage report
+
+          - pwsh: |
+              [string]$coverageSummaryPath = Join-Path "$(OPSLEDGER_DOWNLOADED_COVERAGE_PATH)" "Cobertura.xml"
+              [string]$coverageHtmlPath = Join-Path "$(OPSLEDGER_DOWNLOADED_COVERAGE_PATH)" "index.html"
+
+              if (-not (Test-Path -LiteralPath $coverageSummaryPath -PathType Leaf)) {
+                Get-ChildItem -LiteralPath "$(OPSLEDGER_DOWNLOADED_COVERAGE_PATH)" -Recurse | Select-Object -ExpandProperty FullName
+                throw "Coverage summary file was not found at '$coverageSummaryPath'."
+              }
+
+              if (-not (Test-Path -LiteralPath $coverageHtmlPath -PathType Leaf)) {
+                Get-ChildItem -LiteralPath "$(OPSLEDGER_DOWNLOADED_COVERAGE_PATH)" -Recurse | Select-Object -ExpandProperty FullName
+                throw "Coverage HTML entry point was not found at '$coverageHtmlPath'."
+              }
+
+              Write-Host "Coverage summary: $coverageSummaryPath"
+              Write-Host "Coverage HTML: $coverageHtmlPath"
+            displayName: Verify downloaded coverage report
+
+          - task: PublishCodeCoverageResults@2
+            displayName: Publish code coverage
+            inputs:
+              summaryFileLocation: $(OPSLEDGER_DOWNLOADED_COVERAGE_PATH)\Cobertura.xml
+              pathToSources: $(Build.SourcesDirectory)
+              failIfCoverageEmpty: true
 
           - pwsh: |
               [hashtable]$postgresArguments = @{

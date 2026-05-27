@@ -9,7 +9,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Token,
     [string]$OutputRoot = "artifacts/azure-devops/github-actions",
-    [switch]$SetAzurePipelineVariables
+    [string]$ArtifactPathVariableName = "OPSLEDGER_DOWNLOADED_ARTIFACT_PATH",
+    [switch]$SetAzurePipelineVariables,
+    [switch]$AllowAnyContent
 )
 
 Set-StrictMode -Version Latest
@@ -79,7 +81,17 @@ elseif (Test-Path -LiteralPath (Join-Path $nestedArtifactPath "opsledger-artifac
     Remove-Item -LiteralPath $extractPath -Recurse -Force -ErrorAction SilentlyContinue
 }
 else {
-    throw "Downloaded artifact '$ArtifactName' did not contain opsledger-artifact.json."
+    if (-not $AllowAnyContent) {
+        throw "Downloaded artifact '$ArtifactName' did not contain opsledger-artifact.json."
+    }
+
+    if (Test-Path -LiteralPath $nestedArtifactPath -PathType Container) {
+        Move-Item -LiteralPath $nestedArtifactPath -Destination $artifactPath
+        Remove-Item -LiteralPath $extractPath -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    else {
+        Move-Item -LiteralPath $extractPath -Destination $artifactPath
+    }
 }
 
 Remove-Item -LiteralPath $zipPath -Force -ErrorAction SilentlyContinue
@@ -88,5 +100,5 @@ $resolvedArtifactPath = (Resolve-Path -LiteralPath $artifactPath).Path
 Write-Host "Downloaded GitHub Actions artifact '$ArtifactName' to '$resolvedArtifactPath'."
 
 if ($SetAzurePipelineVariables) {
-    Write-Host "##vso[task.setvariable variable=OPSLEDGER_DOWNLOADED_ARTIFACT_PATH]$resolvedArtifactPath"
+    Write-Host "##vso[task.setvariable variable=$ArtifactPathVariableName]$resolvedArtifactPath"
 }
