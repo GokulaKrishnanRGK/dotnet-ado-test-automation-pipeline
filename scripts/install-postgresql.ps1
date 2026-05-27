@@ -7,7 +7,6 @@ param(
     [string]$SuperuserPassword = $env:OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD,
     [string]$DatabaseName = "opsledger_validation",
     [string]$ApplicationUsername = "opsledger_app",
-    [string]$ApplicationPassword = $env:OPSLEDGER_POSTGRES_APP_PASSWORD,
     [switch]$SetAzurePipelineVariables
 )
 
@@ -112,12 +111,10 @@ function Invoke-PostgreSqlCreateDatabase {
 }
 
 if ([string]::IsNullOrWhiteSpace($SuperuserPassword) -or (Test-UnresolvedAzureMacro -Value $SuperuserPassword)) {
-    $SuperuserPassword = New-LocalPassword
+    throw "OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD must be set for local PostgreSQL installation."
 }
 
-if ([string]::IsNullOrWhiteSpace($ApplicationPassword) -or (Test-UnresolvedAzureMacro -Value $ApplicationPassword)) {
-    $ApplicationPassword = New-LocalPassword
-}
+[string]$applicationPassword = New-LocalPassword
 
 $psqlCommand = Get-Command psql -ErrorAction SilentlyContinue
 if ($null -eq $psqlCommand) {
@@ -126,7 +123,9 @@ if ($null -eq $psqlCommand) {
         throw "PostgreSQL was not found and Chocolatey is unavailable for local installation."
     }
 
-    choco install $PackageName --yes --no-progress --params "/Password:$SuperuserPassword /Port:$Port" --ia "--enable-components server,commandlinetools"
+    $packageParameters = "/Password:$SuperuserPassword /Port:$Port"
+
+    choco install $PackageName --yes --no-progress --params $packageParameters --ia "--enable-components server,commandlinetools"
 
     if ($LASTEXITCODE -ne 0) {
         throw "PostgreSQL installation failed."
@@ -152,7 +151,7 @@ do {
 } while ($true)
 
 $applicationRoleIdentifier = ConvertTo-PostgreSqlIdentifier -Value $ApplicationUsername
-$applicationPasswordLiteral = ConvertTo-PostgreSqlLiteral -Value $ApplicationPassword
+$applicationPasswordLiteral = ConvertTo-PostgreSqlLiteral -Value $applicationPassword
 $applicationRoleLiteral = ConvertTo-PostgreSqlLiteral -Value $ApplicationUsername
 $databaseLiteral = ConvertTo-PostgreSqlLiteral -Value $DatabaseName
 
@@ -201,7 +200,7 @@ Invoke-PostgreSqlCommand `
     -Password $SuperuserPassword `
     -Sql "GRANT ALL PRIVILEGES ON DATABASE $databaseIdentifier TO $applicationRoleIdentifier;"
 
-$connectionString = "Host=$HostName;Port=$Port;Database=$DatabaseName;Username=$ApplicationUsername;Password=$ApplicationPassword;Include Error Detail=true"
+$connectionString = "Host=$HostName;Port=$Port;Database=$DatabaseName;Username=$ApplicationUsername;Password=$applicationPassword;Include Error Detail=true"
 
 Write-Host "PostgreSQL is ready on ${HostName}:$Port."
 Write-Host "Database '$DatabaseName' is ready for validation."
