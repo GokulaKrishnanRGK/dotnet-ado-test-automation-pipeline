@@ -7,6 +7,7 @@ public sealed class CreateRequestPageObject
 {
     private static readonly TimeSpan PageOpenTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan SuccessMessageTimeout = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan ErrorMessageTimeout = TimeSpan.FromSeconds(20);
     private readonly WindowsElementFinder elementFinder;
 
     public CreateRequestPageObject(WindowsElementFinder elementFinder)
@@ -33,6 +34,7 @@ public sealed class CreateRequestPageObject
         elementFinder.SelectPickerValue("RequestCategoryPicker", request.Category);
         elementFinder.SelectPickerValue("RequestPriorityPicker", request.Priority);
         elementFinder.EnterText("RequestDescriptionEditor", request.Description);
+        elementFinder.EnterText("RequestImpactEditor", request.ImpactDetails);
         elementFinder.EnterText("RequesterNameEntry", request.RequesterName);
         elementFinder.EnterText("RequesterEmailEntry", request.RequesterEmail);
     }
@@ -44,7 +46,18 @@ public sealed class CreateRequestPageObject
 
     public string WaitForSuccessMessage()
     {
-        return elementFinder.WaitForLabelText("SubmitSuccessLabel", SuccessMessageTimeout);
+        string successMessage = elementFinder.WaitForLabelText("SubmitSuccessLabel", SuccessMessageTimeout);
+        elementFinder.ScrollToBottom();
+
+        return successMessage;
+    }
+
+    public string WaitForErrorMessage()
+    {
+        string errorMessage = elementFinder.WaitForLabelText("SubmitErrorLabel", ErrorMessageTimeout);
+        elementFinder.ScrollToBottom();
+
+        return errorMessage;
     }
 }
 #endif

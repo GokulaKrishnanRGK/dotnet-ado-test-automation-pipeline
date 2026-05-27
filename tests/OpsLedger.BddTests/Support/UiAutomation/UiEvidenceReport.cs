@@ -8,8 +8,10 @@ public sealed class UiEvidenceReport
     private const string EvidenceDirectoryVariableName = "OPSLEDGER_UI_EVIDENCE_DIR";
     private readonly List<UiEvidenceEntry> entries = [];
     private readonly string evidenceDirectory;
+    private readonly string scenarioDirectory;
     private readonly string screenshotDirectory;
     private readonly string reportPath;
+    private readonly string scenarioSlug;
 
     public UiEvidenceReport(string scenarioName)
     {
@@ -17,8 +19,10 @@ public sealed class UiEvidenceReport
         evidenceDirectory = string.IsNullOrWhiteSpace(configuredDirectory)
             ? Path.Combine("artifacts", "test-results", "bdd", "ui-evidence")
             : configuredDirectory;
-        screenshotDirectory = Path.Combine(evidenceDirectory, "screenshots");
-        reportPath = Path.Combine(evidenceDirectory, "index.html");
+        scenarioSlug = ToSlug(scenarioName);
+        scenarioDirectory = Path.Combine(evidenceDirectory, scenarioSlug);
+        screenshotDirectory = Path.Combine(scenarioDirectory, "screenshots");
+        reportPath = Path.Combine(scenarioDirectory, "index.html");
 
         Directory.CreateDirectory(screenshotDirectory);
         ScenarioName = scenarioName;
@@ -80,6 +84,51 @@ public sealed class UiEvidenceReport
 
         writer.WriteLine("</body>");
         writer.WriteLine("</html>");
+
+        WriteRootReport();
+    }
+
+    private void WriteRootReport()
+    {
+        string rootReportPath = Path.Combine(evidenceDirectory, "index.html");
+        List<UiScenarioReportEntry> scenarioReports = Directory
+            .EnumerateFiles(evidenceDirectory, "index.html", SearchOption.AllDirectories)
+            .Where(path => !string.Equals(path, rootReportPath, StringComparison.OrdinalIgnoreCase))
+            .Select(path => new UiScenarioReportEntry(
+                Path.GetFileName(Path.GetDirectoryName(path) ?? string.Empty),
+                Path.GetRelativePath(evidenceDirectory, path).Replace('\\', '/')))
+            .OrderBy(entry => entry.ScenarioName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        using StreamWriter writer = new(rootReportPath, false);
+        writer.WriteLine("<!doctype html>");
+        writer.WriteLine("<html lang=\"en\">");
+        writer.WriteLine("<head>");
+        writer.WriteLine("  <meta charset=\"utf-8\">");
+        writer.WriteLine("  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+        writer.WriteLine("  <title>OpsLedger UI evidence</title>");
+        writer.WriteLine("  <style>");
+        writer.WriteLine("    body { font-family: Segoe UI, Arial, sans-serif; margin: 32px; color: #172026; background: #f7f9fb; }");
+        writer.WriteLine("    h1 { margin-bottom: 4px; font-size: 28px; }");
+        writer.WriteLine("    .meta { color: #5b6872; margin-bottom: 24px; }");
+        writer.WriteLine("    ul { padding-left: 20px; }");
+        writer.WriteLine("    li { margin-bottom: 10px; }");
+        writer.WriteLine("    a { color: #0f6cbd; }");
+        writer.WriteLine("  </style>");
+        writer.WriteLine("</head>");
+        writer.WriteLine("<body>");
+        writer.WriteLine("  <h1>OpsLedger UI evidence</h1>");
+        writer.WriteLine($"  <div class=\"meta\">Generated {Encode(DateTimeOffset.UtcNow.ToString("O"))}</div>");
+        writer.WriteLine("  <ul>");
+
+        foreach (UiScenarioReportEntry scenarioReport in scenarioReports)
+        {
+            writer.WriteLine($"    <li><a href=\"{Encode(scenarioReport.RelativePath)}\">{Encode(scenarioReport.ScenarioName)}</a></li>");
+        }
+
+        writer.WriteLine("  </ul>");
+        writer.WriteLine("</body>");
+        writer.WriteLine("</html>");
     }
 
     private static string ToSlug(string value)
@@ -101,5 +150,9 @@ public sealed class UiEvidenceReport
         string Label,
         string RelativePath,
         DateTimeOffset CapturedAtUtc);
+
+    private sealed record UiScenarioReportEntry(
+        string ScenarioName,
+        string RelativePath);
 }
 #endif

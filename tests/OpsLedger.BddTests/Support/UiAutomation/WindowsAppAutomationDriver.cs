@@ -11,20 +11,20 @@ public sealed class WindowsAppAutomationDriver : IDisposable
     private readonly WindowsAppAutomationSession session;
     private readonly UiEvidenceReport evidenceReport;
 
-    private WindowsAppAutomationDriver(string executablePath)
+    private WindowsAppAutomationDriver(string executablePath, string scenarioName)
     {
         session = new WindowsAppAutomationSession(executablePath);
-        evidenceReport = new UiEvidenceReport("Submit a valid request through the Windows app");
+        evidenceReport = new UiEvidenceReport(scenarioName);
     }
 
-    public static WindowsAppAutomationDriver FromEnvironment()
+    public static WindowsAppAutomationDriver FromEnvironment(string scenarioName)
     {
         string? executablePath = Environment.GetEnvironmentVariable(ExecutablePathVariableName);
 
         Skip.If(string.IsNullOrWhiteSpace(executablePath), $"{ExecutablePathVariableName} must point to the published Windows executable.");
         Skip.IfNot(File.Exists(executablePath), $"Published Windows executable was not found at '{executablePath}'.");
 
-        return new WindowsAppAutomationDriver(executablePath!);
+        return new WindowsAppAutomationDriver(executablePath!, scenarioName);
     }
 
     public string SubmitServiceRequest(
@@ -33,23 +33,17 @@ public sealed class WindowsAppAutomationDriver : IDisposable
         string priority,
         string description,
         string requesterName,
-        string requesterEmail)
+        string requesterEmail,
+        string impactDetails)
     {
-        Window window = session.GetMainWindow();
-        CaptureEvidence("App launched");
-
-        WindowsShellPage shellPage = new(window);
-        CreateRequestPageObject createRequestPage = shellPage.OpenCreateRequestPage();
-        CaptureEvidence("Create request page opened");
-
-        createRequestPage.FillRequest(new UiServiceRequestInput(
+        CreateRequestPageObject createRequestPage = FillCreateRequestForm(new UiServiceRequestInput(
             title,
             category,
             priority,
             description,
             requesterName,
-            requesterEmail));
-        CaptureEvidence("Create request form filled");
+            requesterEmail,
+            impactDetails));
 
         createRequestPage.SubmitRequest();
         CaptureEvidence("Create request submitted");
@@ -58,6 +52,33 @@ public sealed class WindowsAppAutomationDriver : IDisposable
         CaptureEvidence("Success message displayed");
 
         return successMessage;
+    }
+
+    public string SubmitInvalidServiceRequest(
+        string title,
+        string category,
+        string priority,
+        string description,
+        string requesterName,
+        string requesterEmail,
+        string impactDetails)
+    {
+        CreateRequestPageObject createRequestPage = FillCreateRequestForm(new UiServiceRequestInput(
+            title,
+            category,
+            priority,
+            description,
+            requesterName,
+            requesterEmail,
+            impactDetails));
+
+        createRequestPage.SubmitRequest();
+        CaptureEvidence("Invalid create request submitted");
+
+        string errorMessage = createRequestPage.WaitForErrorMessage();
+        CaptureEvidence("Validation message displayed");
+
+        return errorMessage;
     }
 
     public void Dispose()
@@ -93,6 +114,21 @@ public sealed class WindowsAppAutomationDriver : IDisposable
         {
             Console.WriteLine($"UI evidence capture failed for final state: {exception.Message}");
         }
+    }
+
+    private CreateRequestPageObject FillCreateRequestForm(UiServiceRequestInput request)
+    {
+        Window window = session.GetMainWindow();
+        CaptureEvidence("App launched");
+
+        WindowsShellPage shellPage = new(window);
+        CreateRequestPageObject createRequestPage = shellPage.OpenCreateRequestPage();
+        CaptureEvidence("Create request page opened");
+
+        createRequestPage.FillRequest(request);
+        CaptureEvidence("Create request form filled");
+
+        return createRequestPage;
     }
 }
 #endif

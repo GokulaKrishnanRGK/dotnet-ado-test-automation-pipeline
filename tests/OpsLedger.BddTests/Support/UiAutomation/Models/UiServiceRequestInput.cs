@@ -7,5 +7,6 @@ public sealed record UiServiceRequestInput(
     string Priority,
     string Description,
     string RequesterName,
-    string RequesterEmail);
+    string RequesterEmail,
+    string ImpactDetails);
 #endif

@@ -128,6 +128,20 @@ public sealed class WindowsElementFinder
         return result.Result;
     }
 
+    public void ScrollToBottom()
+    {
+        try
+        {
+            window.Focus();
+            Keyboard.Press(VirtualKeyShort.END);
+            Wait.UntilInputIsProcessed(TimeSpan.FromSeconds(5));
+        }
+        catch (Exception exception) when (IsRecoverableAutomationException(exception))
+        {
+            Console.WriteLine($"UI scroll-to-bottom failed: {exception.Message}");
+        }
+    }
+
     private static string ReadElementText(AutomationElement element)
     {
         string valueText = ReadValuePatternText(element);
