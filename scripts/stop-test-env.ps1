@@ -20,4 +20,10 @@ if ($null -eq $apiProcess) {
 }
 
 Stop-Process -Id $apiProcessId -Force
+$apiProcess.WaitForExit(30000)
+
+if (-not $apiProcess.HasExited) {
+    throw "OpsLedger API process '$apiProcessId' did not exit within 30 seconds."
+}
+
 Write-Host "Stopped OpsLedger API process '$apiProcessId'."
