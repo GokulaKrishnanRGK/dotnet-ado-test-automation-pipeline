@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$PackageName = "postgresql17",
+    [string]$InstallerUrl = "https://get.enterprisedb.com/postgresql/postgresql-17.10-1-windows-x64.exe",
     [string]$HostName = "localhost",
     [int]$Port = 5432,
     [string]$SuperuserName = "postgres",
@@ -55,11 +55,56 @@ function Find-PostgreSqlTool {
 }
 
 function Write-PostgreSqlInstallLog {
-    $installLogPath = Join-Path $env:TEMP "chocolatey\install-postgresql.log"
+    $installLogPath = Join-Path $env:TEMP "install-postgresql.log"
 
     if (Test-Path -LiteralPath $installLogPath -PathType Leaf) {
         Write-Host "PostgreSQL install log:"
         Get-Content -LiteralPath $installLogPath | Write-Host
+    }
+}
+
+function Install-PostgreSql {
+    param(
+        [string]$Url,
+        [string]$Password
+    )
+
+    [string]$installerPath = Join-Path $env:TEMP "postgresql-windows-x64.exe"
+    [string]$installLogPath = Join-Path $env:TEMP "install-postgresql.log"
+
+    Remove-Item -LiteralPath $installerPath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $installLogPath -Force -ErrorAction SilentlyContinue
+
+    Write-Host "Downloading PostgreSQL installer from $Url"
+    Invoke-WebRequest -Uri $Url -OutFile $installerPath
+
+    [string[]]$installerArguments = @(
+        "--mode"
+        "unattended"
+        "--unattendedmodeui"
+        "none"
+        "--superpassword"
+        $Password
+        "--serverport"
+        $Port.ToString()
+        "--debuglevel"
+        "2"
+        "--debugtrace"
+        $installLogPath
+    )
+
+    Write-Host "Installing PostgreSQL with unattended installer."
+    Write-Host "Installer arguments: $($installerArguments -join ' ')"
+
+    $installerProcess = Start-Process `
+        -FilePath $installerPath `
+        -ArgumentList $installerArguments `
+        -Wait `
+        -PassThru
+
+    if ($installerProcess.ExitCode -ne 0) {
+        Write-PostgreSqlInstallLog
+        throw "PostgreSQL installer failed with exit code '$($installerProcess.ExitCode)'."
     }
 }
 
@@ -154,18 +199,7 @@ if ([string]::IsNullOrWhiteSpace($SuperuserPassword) -or (Test-UnresolvedAzureMa
 
 $psqlCommand = Get-Command psql -ErrorAction SilentlyContinue
 if ($null -eq $psqlCommand) {
-    $chocolateyCommand = Get-Command choco -ErrorAction SilentlyContinue
-    if ($null -eq $chocolateyCommand) {
-        throw "PostgreSQL was not found and Chocolatey is unavailable for local installation."
-    }
-
-    $packageParameters = "/Password:$SuperuserPassword /Port:$Port"
-
-    choco install $PackageName --yes --no-progress --params $packageParameters --ia "--enable-components server,commandlinetools"
-
-    if ($LASTEXITCODE -ne 0) {
-        throw "PostgreSQL installation failed."
-    }
+    Install-PostgreSql -Url $InstallerUrl -Password $SuperuserPassword
 }
 
 Start-PostgreSqlService
