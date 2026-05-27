@@ -2,6 +2,9 @@ name: Validate PostgreSQL Setup
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - dev/manual_pipeline_trigger
 
 permissions:
   contents: read
