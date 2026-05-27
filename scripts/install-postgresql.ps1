@@ -38,8 +38,11 @@ function ConvertTo-PostgreSqlIdentifier {
 function Find-PostgreSqlTool {
     param([string]$ToolName)
 
+    Write-Host "Checking for PostgreSQL tool '$ToolName'."
+
     $command = Get-Command $ToolName -ErrorAction SilentlyContinue
     if ($null -ne $command) {
+        Write-Host "Found PostgreSQL tool '$ToolName' on PATH: $($command.Source)"
         return $command.Source
     }
 
@@ -48,9 +51,11 @@ function Find-PostgreSqlTool {
         Select-Object -First 1
 
     if ($null -eq $candidate) {
+        Write-Host "PostgreSQL tool '$ToolName' was not found."
         throw "$ToolName was not found after PostgreSQL installation."
     }
 
+    Write-Host "Found PostgreSQL tool '$ToolName' under Program Files: $($candidate.FullName)"
     return $candidate.FullName
 }
 
@@ -68,6 +73,10 @@ function Install-PostgreSql {
         [string]$Url,
         [string]$Password
     )
+
+    if ([string]::IsNullOrWhiteSpace($Password) -or (Test-UnresolvedAzureMacro -Value $Password)) {
+        throw "OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD must be set before installing PostgreSQL."
+    }
 
     [string]$installerPath = Join-Path $env:TEMP "postgresql-windows-x64.exe"
     [string]$installLogPath = Join-Path $env:TEMP "install-postgresql.log"
@@ -108,6 +117,8 @@ function Install-PostgreSql {
 }
 
 function Get-PostgreSqlService {
+    Write-Host "Checking for PostgreSQL Windows service."
+
     $services = @(Get-Service -ErrorAction SilentlyContinue |
         Where-Object { $_.Name -like "postgresql*" -or $_.DisplayName -like "postgresql*" } |
         Sort-Object -Property Name)
@@ -167,6 +178,7 @@ function Invoke-PostgreSqlCommand {
 function Test-PostgreSqlPassword {
     param(
         [string]$PsqlPath,
+        [AllowNull()]
         [string]$Password,
         [string]$Label
     )
@@ -209,7 +221,12 @@ function Test-PostgreSqlPassword {
 }
 
 function Find-WorkingPostgreSqlPassword {
-    param([string]$PsqlPath)
+    param(
+        [string]$PsqlPath,
+        [string]$ProvidedPassword
+    )
+
+    Write-Host "Checking PostgreSQL superuser authentication with known local credentials."
 
     if (Test-PostgreSqlPassword -PsqlPath $PsqlPath -Password $null -Label "no password") {
         return ""
@@ -221,6 +238,15 @@ function Find-WorkingPostgreSqlPassword {
 
     if (Test-PostgreSqlPassword -PsqlPath $PsqlPath -Password "postgres" -Label "password 'postgres'") {
         return "postgres"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ProvidedPassword) -and -not (Test-UnresolvedAzureMacro -Value $ProvidedPassword)) {
+        if (Test-PostgreSqlPassword -PsqlPath $PsqlPath -Password $ProvidedPassword -Label "provided password") {
+            return $ProvidedPassword
+        }
+    }
+    else {
+        Write-Host "No provided PostgreSQL superuser password is available to test."
     }
 
     return $null
@@ -254,13 +280,27 @@ function Invoke-PostgreSqlCreateDatabase {
 
 [string]$applicationPassword = New-LocalPassword
 
+Write-Host "Checking whether PostgreSQL is already installed."
 $psqlCommand = Get-Command psql -ErrorAction SilentlyContinue
-if ($null -eq $psqlCommand) {
-    if ([string]::IsNullOrWhiteSpace($SuperuserPassword) -or (Test-UnresolvedAzureMacro -Value $SuperuserPassword)) {
-        throw "OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD must be set for local PostgreSQL installation."
-    }
+$existingPsql = $null
+$postgresInstalledByThisRun = $false
 
-    Install-PostgreSql -Url $InstallerUrl -Password $SuperuserPassword
+if ($null -ne $psqlCommand) {
+    Write-Host "PostgreSQL appears to be pre-installed because psql is available on PATH: $($psqlCommand.Source)"
+}
+else {
+    $existingPsql = Get-ChildItem -Path "C:\Program Files\PostgreSQL" -Filter "psql.exe" -Recurse -ErrorAction SilentlyContinue |
+        Sort-Object -Property FullName -Descending |
+        Select-Object -First 1
+
+    if ($null -ne $existingPsql) {
+        Write-Host "PostgreSQL appears to be pre-installed under Program Files: $($existingPsql.FullName)"
+    }
+    else {
+        Write-Host "PostgreSQL was not found. Downloading and installing PostgreSQL."
+        Install-PostgreSql -Url $InstallerUrl -Password $SuperuserPassword
+        $postgresInstalledByThisRun = $true
+    }
 }
 
 Start-PostgreSqlService
@@ -268,13 +308,25 @@ Start-PostgreSqlService
 $psqlPath = Find-PostgreSqlTool -ToolName "psql.exe"
 $createdbPath = Find-PostgreSqlTool -ToolName "createdb.exe"
 
-$detectedSuperuserPassword = Find-WorkingPostgreSqlPassword -PsqlPath $psqlPath
+$detectedSuperuserPassword = Find-WorkingPostgreSqlPassword -PsqlPath $psqlPath -ProvidedPassword $SuperuserPassword
+
+if ($null -eq $detectedSuperuserPassword -and $postgresInstalledByThisRun) {
+    Write-Host "PostgreSQL was installed by this run, but no tested password worked yet. Re-running service start and authentication checks."
+    Start-PostgreSqlService
+    $detectedSuperuserPassword = Find-WorkingPostgreSqlPassword -PsqlPath $psqlPath -ProvidedPassword $SuperuserPassword
+}
 
 if ($null -ne $detectedSuperuserPassword) {
     $SuperuserPassword = $detectedSuperuserPassword
 }
-elseif ([string]::IsNullOrWhiteSpace($SuperuserPassword) -or (Test-UnresolvedAzureMacro -Value $SuperuserPassword)) {
-    throw "PostgreSQL is installed but no known local password worked. Set OPSLEDGER_POSTGRES_SUPERUSER_PASSWORD or install PostgreSQL with passwordless local access."
+elseif ($null -ne $psqlCommand -or $null -ne $existingPsql) {
+    Write-Host "PostgreSQL was already installed, but none of the tested superuser credentials worked."
+    Write-Host "PostgreSQL installation will be skipped because an existing installation is present."
+    throw "Unable to authenticate to the existing PostgreSQL instance."
+}
+else {
+    Write-PostgreSqlInstallLog
+    throw "PostgreSQL was installed, but none of the tested superuser credentials worked."
 }
 
 $deadline = (Get-Date).AddSeconds(90)
