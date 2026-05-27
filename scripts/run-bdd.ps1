@@ -13,7 +13,19 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$arguments = @(
+[string]$runnerPath = Join-Path $PSScriptRoot "Run-BddAgainstArtifact.ps1"
+[string[]]$requiredParameters = @("ArtifactPath", "Configuration", "ResultsRoot", "TestFilter")
+[System.Management.Automation.CommandInfo]$runnerCommand = Get-Command $runnerPath
+
+foreach ($requiredParameter in $requiredParameters) {
+    [string]$parameterName = $requiredParameter
+
+    if (-not $runnerCommand.Parameters.ContainsKey($parameterName)) {
+        throw "BDD artifact runner '$runnerPath' is missing the '$parameterName' parameter. Ensure scripts/run-bdd.ps1 and scripts/Run-BddAgainstArtifact.ps1 come from the same repository revision."
+    }
+}
+
+[string[]]$arguments = @(
     "-ArtifactPath"
     $ArtifactPath
     "-Configuration"
@@ -39,4 +51,4 @@ if ($NoBuild) {
     $arguments += "-NoBuild"
 }
 
-& (Join-Path $PSScriptRoot "Run-BddAgainstArtifact.ps1") @arguments
+& $runnerPath @arguments
