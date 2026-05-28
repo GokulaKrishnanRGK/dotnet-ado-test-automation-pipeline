@@ -24,6 +24,7 @@ $values = [ordered]@{
     AZDO_PIPELINE_TRIGGER_PAT = "<create-in-azure-devops-and-store-in-github-actions-secret-if-needed>"
     TEAMS_WORKFLOW_WEBHOOK_URL = "<teams-workflows-webhook-url>"
     ADO_WORK_ITEM_DEDUPE_SALT = (New-RandomSecret)
+    ADO_WORK_ITEM_TYPE = "Issue"
 }
 
 $content = @(

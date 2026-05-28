@@ -16,7 +16,7 @@ param(
     [string]$ArtifactName,
     [Parameter(Mandatory = $true)]
     [string]$PipelineRunUrl,
-    [string]$WorkItemType = "Bug",
+    [string]$WorkItemType = "Issue",
     [string]$AreaPath = "",
     [string]$AssignedTo = "",
     [string]$AccessToken = $env:SYSTEM_ACCESSTOKEN,
