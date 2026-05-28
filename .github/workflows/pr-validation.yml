@@ -58,7 +58,7 @@ jobs:
           --collect:"XPlat Code Coverage"
           --
           DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
-          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile="**/Migrations/*.cs,**/*.Designer.cs,**/Platforms/**/*.cs,**/obj/**/*.cs"
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile="**/Migrations/*.cs,**/*.Designer.cs,**/Platforms/**/*.cs,**/obj/**/*.cs,**/Persistence/Configurations/*.cs,**/Persistence/Entities/*.cs,**/Persistence/OpsLedgerDbContext*.cs,**/Persistence/Repositories/PersistedServiceRequest.cs,**/Persistence/Repositories/PostgreSqlRoutineCall.cs,**/Persistence/Repositories/PostgreSqlServiceRequestRepository.cs,**/PostgreSqlServiceRequestStore.cs"
           DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Exclude="[*.Tests]*"
 
       - name: Run API integration tests
@@ -75,7 +75,7 @@ jobs:
           --collect:"XPlat Code Coverage"
           --
           DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
-          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile="**/Migrations/*.cs,**/*.Designer.cs,**/Platforms/**/*.cs,**/obj/**/*.cs"
+          DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.ExcludeByFile="**/Migrations/*.cs,**/*.Designer.cs,**/Platforms/**/*.cs,**/obj/**/*.cs,**/Persistence/Configurations/*.cs,**/Persistence/Entities/*.cs,**/Persistence/OpsLedgerDbContext*.cs,**/Persistence/Repositories/PersistedServiceRequest.cs,**/Persistence/Repositories/PostgreSqlRoutineCall.cs,**/Persistence/Repositories/PostgreSqlServiceRequestRepository.cs,**/PostgreSqlServiceRequestStore.cs"
           DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Exclude="[*.Tests]*"
 
       - name: Run API BDD scenarios
@@ -113,7 +113,7 @@ jobs:
           -reporttypes:"Html;HtmlInline_AzurePipelines;Cobertura;MarkdownSummaryGithub"
           -assemblyfilters:"+OpsLedger.*;-*.Tests"
           -classfilters:"-*.Migrations.*"
-          -filefilters:"-**/Migrations/*.cs;-**/*.Designer.cs;-**/Platforms/**/*.cs;-**/obj/**/*.cs"
+          -filefilters:"-**/Migrations/*.cs;-**/*.Designer.cs;-**/Platforms/**/*.cs;-**/obj/**/*.cs;-**/Persistence/Configurations/*.cs;-**/Persistence/Entities/*.cs;-**/Persistence/OpsLedgerDbContext*.cs;-**/Persistence/Repositories/PersistedServiceRequest.cs;-**/Persistence/Repositories/PostgreSqlRoutineCall.cs;-**/Persistence/Repositories/PostgreSqlServiceRequestRepository.cs;-**/PostgreSqlServiceRequestStore.cs"
 
       - name: Verify coverage report HTML
         if: ${{ always() && hashFiles('artifacts/coverage-report/Cobertura.xml') != '' }}

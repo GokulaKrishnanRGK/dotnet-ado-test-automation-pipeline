@@ -408,6 +408,12 @@ stages:
 
           - pwsh: |
               [string]$pipelineRunUrl = "$(System.CollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)"
+              [string]$configuredWorkItemType = "$(ADO_WORK_ITEM_TYPE)"
+
+              if ([string]::IsNullOrWhiteSpace($configuredWorkItemType) -or $configuredWorkItemType.StartsWith("$(")) {
+                $configuredWorkItemType = "Issue"
+              }
+
               [hashtable]$workItemArguments = @{
                 OrganizationUrl = "$(System.CollectionUri)"
                 Project = "$(System.TeamProject)"
@@ -417,7 +423,7 @@ stages:
                 GithubRunUrl = "$(GITHUB_RUN_URL)"
                 ArtifactName = "$(GITHUB_ARTIFACT_NAME)"
                 PipelineRunUrl = $pipelineRunUrl
-                WorkItemType = "Bug"
+                WorkItemType = $configuredWorkItemType
               }
 
               ./scripts/create-ado-work-item.ps1 @workItemArguments

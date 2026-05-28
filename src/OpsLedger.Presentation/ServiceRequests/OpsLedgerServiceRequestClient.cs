@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using OpsLedger.Presentation.ServiceRequests.Dto;
 
 namespace OpsLedger.Presentation.ServiceRequests;
@@ -14,13 +15,13 @@ public sealed class OpsLedgerServiceRequestClient(HttpClient httpClient) : IServ
 
         if (response.StatusCode == HttpStatusCode.BadRequest)
         {
-            ValidationErrorResponse? validation = await response.Content.ReadFromJsonAsync<ValidationErrorResponse>(cancellationToken);
+            ValidationErrorResponse? validation = await ReadJsonOrNullAsync<ValidationErrorResponse>(response.Content, cancellationToken);
             return ServiceRequestClientResult.Invalid(validation?.Errors ?? ["Unable to create service request."]);
         }
 
         response.EnsureSuccessStatusCode();
 
-        ServiceRequestSummary? created = await response.Content.ReadFromJsonAsync<ServiceRequestSummary>(cancellationToken);
+        ServiceRequestSummary? created = await ReadJsonOrNullAsync<ServiceRequestSummary>(response.Content, cancellationToken);
         if (created is null)
         {
             return ServiceRequestClientResult.Invalid(["The service request response was empty."]);
@@ -106,19 +107,33 @@ public sealed class OpsLedgerServiceRequestClient(HttpClient httpClient) : IServ
 
         if (response.StatusCode == HttpStatusCode.BadRequest)
         {
-            ValidationErrorResponse? validation = await response.Content.ReadFromJsonAsync<ValidationErrorResponse>(cancellationToken);
+            ValidationErrorResponse? validation = await ReadJsonOrNullAsync<ValidationErrorResponse>(response.Content, cancellationToken);
             return ServiceRequestClientResult.Invalid(validation?.Errors ?? ["The request was invalid."]);
         }
 
         response.EnsureSuccessStatusCode();
 
-        ServiceRequestSummary? updated = await response.Content.ReadFromJsonAsync<ServiceRequestSummary>(cancellationToken);
+        ServiceRequestSummary? updated = await ReadJsonOrNullAsync<ServiceRequestSummary>(response.Content, cancellationToken);
         if (updated is null)
         {
             return ServiceRequestClientResult.Invalid(["The service request response was empty."]);
         }
 
         return ServiceRequestClientResult.Created(updated);
+    }
+
+    private static async Task<T?> ReadJsonOrNullAsync<T>(
+        HttpContent content,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await content.ReadFromJsonAsync<T>(cancellationToken);
+        }
+        catch (JsonException)
+        {
+            return default;
+        }
     }
 
     private sealed record ValidationErrorResponse(IReadOnlyList<string> Errors);

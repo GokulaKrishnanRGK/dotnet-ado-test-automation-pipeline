@@ -15,6 +15,19 @@ public sealed class ServiceRequestApiTests : IClassFixture<InMemoryApiFactory>
     }
 
     [Fact]
+    public async Task Get_health_returns_service_status()
+    {
+        using HttpResponseMessage response = await _client.GetAsync("/health");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        HealthResponse? body = await response.Content.ReadFromJsonAsync<HealthResponse>();
+        body.Should().NotBeNull();
+        body!.Status.Should().Be("Healthy");
+        body.Service.Should().Be("OpsLedger.Api");
+    }
+
+    [Fact]
     public async Task Post_service_requests_creates_new_request()
     {
         CreateServiceRequestApiRequest request = new(
@@ -249,4 +262,5 @@ public sealed class ServiceRequestApiTests : IClassFixture<InMemoryApiFactory>
         return body!;
     }
 
+    private sealed record HealthResponse(string Status, string Service);
 }
