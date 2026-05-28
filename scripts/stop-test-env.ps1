@@ -11,7 +11,17 @@ if ([string]::IsNullOrWhiteSpace($ProcessId)) {
     return
 }
 
-[int]$apiProcessId = [int]$ProcessId
+if ($ProcessId.StartsWith('$(')) {
+    Write-Host "OpsLedger API process id was not resolved by the pipeline."
+    return
+}
+
+[int]$apiProcessId = 0
+if (-not [int]::TryParse($ProcessId, [ref]$apiProcessId)) {
+    Write-Host "OpsLedger API process id '$ProcessId' is not numeric."
+    return
+}
+
 $apiProcess = Get-Process -Id $apiProcessId -ErrorAction SilentlyContinue
 
 if ($null -eq $apiProcess) {
