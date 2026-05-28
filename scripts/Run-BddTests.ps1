@@ -6,7 +6,8 @@ param(
     [string]$TestFilter = "",
     [string[]]$DotNetProperties = @(),
     [switch]$NoRestore,
-    [switch]$NoBuild
+    [switch]$NoBuild,
+    [switch]$ContinueOnTestFailure
 )
 
 Set-StrictMode -Version Latest
@@ -59,9 +60,15 @@ foreach ($dotNetProperty in $DotNetProperties) {
 }
 
 & dotnet @testArguments
+[int]$testExitCode = $LASTEXITCODE
 
-if ($LASTEXITCODE -ne 0) {
+if ($testExitCode -ne 0 -and -not $ContinueOnTestFailure) {
     throw "BDD test execution failed."
+}
+
+if ($testExitCode -ne 0) {
+    Write-Warning "BDD test execution completed with failing tests. Test results were still written for publishing."
+    $global:LASTEXITCODE = 0
 }
 
 Write-Host "BDD test results written to $(Join-Path $ResultsDirectory $trxFileName)"

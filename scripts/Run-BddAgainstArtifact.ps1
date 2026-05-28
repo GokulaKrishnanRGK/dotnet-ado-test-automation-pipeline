@@ -7,7 +7,8 @@ param(
     [string]$TestFilter = "",
     [switch]$IncludeUi,
     [switch]$NoRestore,
-    [switch]$NoBuild
+    [switch]$NoBuild,
+    [switch]$ContinueOnTestFailure
 )
 
 Set-StrictMode -Version Latest
@@ -63,6 +64,10 @@ if ($NoBuild) {
     $runBddArguments.NoBuild = $true
 }
 
+if ($ContinueOnTestFailure) {
+    $runBddArguments.ContinueOnTestFailure = $true
+}
+
 if ($TestFilter) {
     $runBddArguments.TestFilter = $TestFilter
 }
@@ -82,9 +87,15 @@ if ($IncludeUi) {
 }
 
 & (Join-Path $PSScriptRoot "Run-BddTests.ps1") @runBddArguments
+[int]$bddExitCode = $LASTEXITCODE
 
-if ($LASTEXITCODE -ne 0) {
+if ($bddExitCode -ne 0 -and -not $ContinueOnTestFailure) {
     throw "BDD artifact validation failed for '$($metadata.artifactName)'."
+}
+
+if ($bddExitCode -ne 0) {
+    Write-Warning "BDD artifact validation completed with failing tests for '$($metadata.artifactName)'."
+    $global:LASTEXITCODE = 0
 }
 
 $completedAtUtc = (Get-Date).ToUniversalTime().ToString("O")
@@ -99,6 +110,7 @@ $runMetadata = [ordered]@{
     executablePath = $env:OPSLEDGER_BDD_APP_EXECUTABLE_PATH
     resultsDirectory = (Resolve-Path -LiteralPath $artifactResultsDirectory).Path
     trxPath = (Join-Path (Resolve-Path -LiteralPath $artifactResultsDirectory).Path "OpsLedger.BddTests.trx")
+    testExitCode = $bddExitCode
     startedAtUtc = $startedAtUtc
     completedAtUtc = $completedAtUtc
 }
