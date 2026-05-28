@@ -409,8 +409,9 @@ stages:
           - pwsh: |
               [string]$pipelineRunUrl = "$(System.CollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)"
               [string]$configuredWorkItemType = "$(ADO_WORK_ITEM_TYPE)"
+              [string]$unresolvedVariablePrefix = [string]([char]36) + [string]([char]40)
 
-              if ([string]::IsNullOrWhiteSpace($configuredWorkItemType) -or $configuredWorkItemType.StartsWith("$(")) {
+              if ([string]::IsNullOrWhiteSpace($configuredWorkItemType) -or $configuredWorkItemType.StartsWith($unresolvedVariablePrefix)) {
                 $configuredWorkItemType = "Issue"
               }
 
